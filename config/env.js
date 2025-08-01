@@ -7,9 +7,10 @@ const config = {
   database: {
     host: process.env.DB_HOST || 'localhost',
     port: parseInt(process.env.DB_PORT) || 5432,
-    name: process.env.DB_NAME || 'aimec_db',
+    name: process.env.DB_NAME || 'postgres',
     user: process.env.DB_USER || 'postgres',
     password: process.env.DB_PASSWORD || 'password',
+    schema: process.env.DB_SCHEMA || 'aimec_products',
   },
   
   // Entorno

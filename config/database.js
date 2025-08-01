@@ -14,11 +14,35 @@ const pool = new Pool({
   connectionTimeoutMillis: 2000, // tiempo máximo para establecer conexión
 });
 
+// Configurar el esquema en cada conexión del pool
+pool.on('connect', async (client) => {
+  try {
+    await client.query(`SET search_path TO ${config.database.schema}, public`);
+  } catch (error) {
+    console.warn('⚠️  No se pudo establecer el esquema en la conexión:', error.message);
+  }
+});
+
+// Configurar el esquema por defecto
+const setSchema = async (client) => {
+  try {
+    await client.query(`SET search_path TO ${config.database.schema}, public`);
+  } catch (error) {
+    console.warn('⚠️  No se pudo establecer el esquema:', error.message);
+  }
+};
+
 // Función para probar la conexión
 const testConnection = async () => {
   try {
     const client = await pool.connect();
+    
+    // Configurar el esquema
+    await setSchema(client);
+    
     console.log('✅ Conexión a la base de datos establecida correctamente');
+    console.log(`📁 Usando esquema: ${config.database.schema}`);
+    
     client.release();
     return true;
   } catch (error) {
