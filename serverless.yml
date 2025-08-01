@@ -15,7 +15,6 @@ functions:
   api:
     handler: handler.handler
     events:
-      - http: ANY /
       - http: ANY /{proxy+}
     environment:
       DB_HOST: ${env:DB_HOST, 'localhost'}
@@ -29,5 +28,6 @@ plugins:
 
 custom:
   serverless-offline:
-    httpPort: 3000
+    httpPort: 3750
     noPrependStageInUrl: true
+    host: 0.0.0.0
