@@ -15,7 +15,9 @@ Backend serverless para el sistema AIMEC con conexión a PostgreSQL. Sistema com
 
 ## 📋 Configuración de la Base de Datos
 
-### 1. Instalar PostgreSQL
+### Opción 1: Base de Datos Local (Desarrollo)
+
+#### 1. Instalar PostgreSQL
 
 Asegúrate de tener PostgreSQL instalado en tu sistema:
 
@@ -23,7 +25,7 @@ Asegúrate de tener PostgreSQL instalado en tu sistema:
 - **macOS**: `brew install postgresql`
 - **Ubuntu**: `sudo apt-get install postgresql postgresql-contrib`
 
-### 2. Crear la Base de Datos
+#### 2. Crear la Base de Datos
 
 ```sql
 -- Conectar a PostgreSQL
@@ -36,12 +38,101 @@ CREATE DATABASE aimec_db;
 \l
 ```
 
+### Opción 2: Base de Datos en AWS RDS (Producción)
+
+#### 1. Instalar AWS CLI
+
+```bash
+# Windows (usando chocolatey)
+choco install awscli
+
+# macOS
+brew install awscli
+
+# Ubuntu/Debian
+sudo apt-get install awscli
+```
+
+#### 2. Configurar AWS CLI
+
+```bash
+# Configurar credenciales
+aws configure
+
+# Ingresa tu Access Key ID, Secret Access Key, región (ej: us-east-2) y formato de salida (json)
+```
+
+#### 3. Crear Instancia RDS PostgreSQL
+
+```bash
+# Crear grupo de subredes (si no existe)
+aws rds create-db-subnet-group \
+    --db-subnet-group-name aimec-subnet-group \
+    --db-subnet-group-description "Subnet group for AIMEC database" \
+    --subnet-ids subnet-12345678 subnet-87654321
+
+# Crear grupo de seguridad
+aws ec2 create-security-group \
+    --group-name aimec-db-sg \
+    --description "Security group for AIMEC database"
+
+# Agregar regla para permitir tráfico PostgreSQL
+aws ec2 authorize-security-group-ingress \
+    --group-name aimec-db-sg \
+    --protocol tcp \
+    --port 5432 \
+    --cidr 0.0.0.0/0
+
+# Crear instancia RDS
+aws rds create-db-instance \
+    --db-instance-identifier aimec-db \
+    --db-instance-class db.t3.micro \
+    --engine postgres \
+    --master-username postgres \
+    --master-user-password TuPasswordSeguro123! \
+    --allocated-storage 20 \
+    --db-name aimec_db \
+    --vpc-security-group-ids sg-12345678 \
+    --db-subnet-group-name aimec-subnet-group \
+    --backup-retention-period 7 \
+    --storage-encrypted
+
+# Verificar el estado de la instancia
+aws rds describe-db-instances --db-instance-identifier aimec-db
+```
+
+#### 4. Obtener Endpoint de la Base de Datos
+
+```bash
+# Obtener el endpoint de la instancia
+aws rds describe-db-instances \
+    --db-instance-identifier aimec-db \
+    --query 'DBInstances[0].Endpoint.Address' \
+    --output text
+```
+
+#### 5. Configurar Variables de Entorno para AWS
+
+```env
+# Configuración de la base de datos PostgreSQL en AWS RDS
+DB_HOST=tu-instancia.region.rds.amazonaws.com
+DB_PORT=5432
+DB_NAME=aimec_db
+DB_USER=postgres
+DB_PASSWORD=TuPasswordSeguro123!
+
+# Configuración para producción
+NODE_ENV=production
+AWS_REGION=us-east-2
+```
+
 ### 3. Configurar Variables de Entorno
 
 Crea un archivo `.env` en la raíz del proyecto con las siguientes variables:
 
+#### Para Desarrollo Local:
 ```env
-# Configuración de la base de datos PostgreSQL
+# Configuración de la base de datos PostgreSQL local
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=aimec_db
@@ -50,6 +141,20 @@ DB_PASSWORD=tu_password_aqui
 
 # Configuración para desarrollo local
 NODE_ENV=development
+```
+
+#### Para Producción (AWS RDS):
+```env
+# Configuración de la base de datos PostgreSQL en AWS RDS
+DB_HOST=tu-instancia.region.rds.amazonaws.com
+DB_PORT=5432
+DB_NAME=aimec_db
+DB_USER=postgres
+DB_PASSWORD=TuPasswordSeguro123!
+
+# Configuración para producción
+NODE_ENV=production
+AWS_REGION=us-east-2
 ```
 
 ### 4. Instalar Dependencias
@@ -91,7 +196,6 @@ AIMEC-backend/
 │   │   ├── categories.js    # Consultas de categorías
 │   │   ├── specifications.js # Consultas de especificaciones
 │   │   └── index.js         # Índice de consultas
-│   ├── init.sql         # Esquema de base de datos
 │   └── queries.js       # Consultas principales
 ├── routes/
 │   ├── products.js      # Rutas de productos
@@ -244,9 +348,25 @@ npm run logs         # Ver logs
 ## 🔧 Solución de Problemas
 
 ### Error de Conexión a la Base de Datos
+
+#### Para Base de Datos Local:
 1. Verifica que PostgreSQL esté ejecutándose
 2. Confirma las credenciales en el archivo `.env`
 3. Asegúrate de que la base de datos `aimec_db` exista
+
+#### Para Base de Datos AWS RDS:
+1. Verifica que la instancia RDS esté en estado "Available"
+2. Confirma que el grupo de seguridad permita conexiones desde tu IP
+3. Verifica las credenciales y el endpoint en el archivo `.env`
+4. Asegúrate de que la instancia esté en la misma VPC que tu aplicación
+
+```bash
+# Verificar estado de la instancia RDS
+aws rds describe-db-instances --db-instance-identifier aimec-db
+
+# Verificar grupos de seguridad
+aws ec2 describe-security-groups --group-names aimec-db-sg
+```
 
 ### Error de Permisos
 ```sql
@@ -255,9 +375,20 @@ GRANT ALL PRIVILEGES ON DATABASE aimec_db TO postgres;
 ```
 
 ### Verificar Conexión
+
+#### Para Base de Datos Local:
 ```bash
 # Probar conexión desde línea de comandos
 psql -h localhost -U postgres -d aimec_db
+```
+
+#### Para Base de Datos AWS RDS:
+```bash
+# Probar conexión desde línea de comandos
+psql -h tu-instancia.region.rds.amazonaws.com -U postgres -d aimec_db
+
+# O usando el endpoint completo
+psql "postgresql://postgres:TuPasswordSeguro123!@tu-instancia.region.rds.amazonaws.com:5432/aimec_db"
 ```
 
 ### Logs de la Aplicación
