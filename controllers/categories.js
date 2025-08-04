@@ -1,4 +1,4 @@
-const categoryQueries = require('../database/queries/categories');
+const CategoryService = require('../services/CategoryService');
 
 // =====================================================
 // CONTROLADOR DE CATEGORÍAS
@@ -7,11 +7,11 @@ const categoryQueries = require('../database/queries/categories');
 // Obtener todas las categorías
 const getAllCategories = async (req, res, next) => {
   try {
-    const categories = await categoryQueries.getAllCategories();
+    const categories = await CategoryService.getAllCategories();
+    
     res.json({
       success: true,
-      data: categories,
-      count: categories.length
+      data: categories
     });
   } catch (error) {
     next(error);
@@ -21,7 +21,7 @@ const getAllCategories = async (req, res, next) => {
 // Obtener categoría por ID
 const getCategoryById = async (req, res, next) => {
   try {
-    const category = await categoryQueries.getCategoryById(parseInt(req.params.id));
+    const category = await CategoryService.getCategoryById(parseInt(req.params.id));
     
     if (!category) {
       return res.status(404).json({
@@ -45,19 +45,19 @@ const createCategory = async (req, res, next) => {
     const categoryData = req.body;
     
     // Validaciones básicas
-    if (!categoryData.name) {
+    if (!categoryData.name || !categoryData.slug) {
       return res.status(400).json({
         success: false,
-        error: "Nombre de categoría es requerido"
+        error: "Nombre y slug son requeridos"
       });
     }
 
-    const category = await categoryQueries.createCategory(categoryData);
+    const category = await CategoryService.createCategory(categoryData);
     
     res.status(201).json({
       success: true,
-      message: "Categoría creada exitosamente",
-      data: category
+      data: category,
+      message: "Categoría creada correctamente"
     });
   } catch (error) {
     next(error);
@@ -68,23 +68,14 @@ const createCategory = async (req, res, next) => {
 const updateCategory = async (req, res, next) => {
   try {
     const categoryId = parseInt(req.params.id);
-    const updateData = req.body;
+    const categoryData = req.body;
 
-    // Verificar que la categoría existe
-    const existingCategory = await categoryQueries.getCategoryById(categoryId);
-    if (!existingCategory) {
-      return res.status(404).json({
-        success: false,
-        error: "Categoría no encontrada"
-      });
-    }
-
-    const category = await categoryQueries.updateCategory(categoryId, updateData);
+    const category = await CategoryService.updateCategory(categoryId, categoryData);
     
     res.json({
       success: true,
-      message: "Categoría actualizada exitosamente",
-      data: category
+      data: category,
+      message: "Categoría actualizada correctamente"
     });
   } catch (error) {
     next(error);
@@ -95,22 +86,12 @@ const updateCategory = async (req, res, next) => {
 const deleteCategory = async (req, res, next) => {
   try {
     const categoryId = parseInt(req.params.id);
-
-    // Verificar que la categoría existe
-    const existingCategory = await categoryQueries.getCategoryById(categoryId);
-    if (!existingCategory) {
-      return res.status(404).json({
-        success: false,
-        error: "Categoría no encontrada"
-      });
-    }
-
-    const category = await categoryQueries.deleteCategory(categoryId);
+    
+    const result = await CategoryService.deleteCategory(categoryId);
     
     res.json({
       success: true,
-      message: "Categoría eliminada exitosamente",
-      data: category
+      message: result.message
     });
   } catch (error) {
     next(error);
@@ -121,63 +102,40 @@ const deleteCategory = async (req, res, next) => {
 // CONTROLADOR DE SUBCATEGORÍAS
 // =====================================================
 
-// Obtener subcategorías por categoría
+// Obtener subcategorías de una categoría
 const getSubcategoriesByCategory = async (req, res, next) => {
   try {
     const categoryId = parseInt(req.params.categoryId);
-    const subcategories = await categoryQueries.getSubcategoriesByCategory(categoryId);
+    const subcategories = await CategoryService.getSubcategoriesByCategory(categoryId);
     
     res.json({
       success: true,
-      data: subcategories,
-      count: subcategories.length,
-      categoryId
+      data: subcategories
     });
   } catch (error) {
     next(error);
   }
 };
 
-// Obtener subcategoría por ID
-const getSubcategoryById = async (req, res, next) => {
-  try {
-    const subcategory = await categoryQueries.getSubcategoryById(parseInt(req.params.id));
-    
-    if (!subcategory) {
-      return res.status(404).json({
-        success: false,
-        error: "Subcategoría no encontrada"
-      });
-    }
-
-    res.json({
-      success: true,
-      data: subcategory
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// Crear nueva subcategoría
+// Crear subcategoría
 const createSubcategory = async (req, res, next) => {
   try {
     const subcategoryData = req.body;
     
     // Validaciones básicas
-    if (!subcategoryData.name || !subcategoryData.category_id) {
+    if (!subcategoryData.name || !subcategoryData.slug || !subcategoryData.category_id) {
       return res.status(400).json({
         success: false,
-        error: "Nombre y categoría padre son requeridos"
+        error: "Nombre, slug y categoría padre son requeridos"
       });
     }
 
-    const subcategory = await categoryQueries.createSubcategory(subcategoryData);
+    const subcategory = await CategoryService.createSubcategory(subcategoryData);
     
     res.status(201).json({
       success: true,
-      message: "Subcategoría creada exitosamente",
-      data: subcategory
+      data: subcategory,
+      message: "Subcategoría creada correctamente"
     });
   } catch (error) {
     next(error);
@@ -188,23 +146,14 @@ const createSubcategory = async (req, res, next) => {
 const updateSubcategory = async (req, res, next) => {
   try {
     const subcategoryId = parseInt(req.params.id);
-    const updateData = req.body;
+    const subcategoryData = req.body;
 
-    // Verificar que la subcategoría existe
-    const existingSubcategory = await categoryQueries.getSubcategoryById(subcategoryId);
-    if (!existingSubcategory) {
-      return res.status(404).json({
-        success: false,
-        error: "Subcategoría no encontrada"
-      });
-    }
-
-    const subcategory = await categoryQueries.updateSubcategory(subcategoryId, updateData);
+    const subcategory = await CategoryService.updateSubcategory(subcategoryId, subcategoryData);
     
     res.json({
       success: true,
-      message: "Subcategoría actualizada exitosamente",
-      data: subcategory
+      data: subcategory,
+      message: "Subcategoría actualizada correctamente"
     });
   } catch (error) {
     next(error);
@@ -215,22 +164,12 @@ const updateSubcategory = async (req, res, next) => {
 const deleteSubcategory = async (req, res, next) => {
   try {
     const subcategoryId = parseInt(req.params.id);
-
-    // Verificar que la subcategoría existe
-    const existingSubcategory = await categoryQueries.getSubcategoryById(subcategoryId);
-    if (!existingSubcategory) {
-      return res.status(404).json({
-        success: false,
-        error: "Subcategoría no encontrada"
-      });
-    }
-
-    const subcategory = await categoryQueries.deleteSubcategory(subcategoryId);
+    
+    const result = await CategoryService.deleteSubcategory(subcategoryId);
     
     res.json({
       success: true,
-      message: "Subcategoría eliminada exitosamente",
-      data: subcategory
+      message: result.message
     });
   } catch (error) {
     next(error);
@@ -244,11 +183,16 @@ const deleteSubcategory = async (req, res, next) => {
 // Obtener todas las marcas
 const getAllBrands = async (req, res, next) => {
   try {
-    const brands = await categoryQueries.getAllBrands();
+    const { Brand } = require('../models');
+    
+    const brands = await Brand.findAll({
+      where: { is_active: true },
+      order: [['sort_order', 'ASC'], ['name', 'ASC']]
+    });
+    
     res.json({
       success: true,
-      data: brands,
-      count: brands.length
+      data: brands
     });
   } catch (error) {
     next(error);
@@ -258,7 +202,20 @@ const getAllBrands = async (req, res, next) => {
 // Obtener marca por ID
 const getBrandById = async (req, res, next) => {
   try {
-    const brand = await categoryQueries.getBrandById(parseInt(req.params.id));
+    const { Brand, Product } = require('../models');
+    
+    const brand = await Brand.findByPk(parseInt(req.params.id), {
+      include: [
+        {
+          model: Product,
+          as: 'products',
+          where: { is_active: true },
+          required: false,
+          attributes: ['id', 'name', 'sku', 'price', 'main_image'],
+          limit: 10
+        }
+      ]
+    });
     
     if (!brand) {
       return res.status(404).json({
@@ -279,22 +236,23 @@ const getBrandById = async (req, res, next) => {
 // Crear nueva marca
 const createBrand = async (req, res, next) => {
   try {
+    const { Brand } = require('../models');
     const brandData = req.body;
     
     // Validaciones básicas
     if (!brandData.name) {
       return res.status(400).json({
         success: false,
-        error: "Nombre de marca es requerido"
+        error: "Nombre es requerido"
       });
     }
 
-    const brand = await categoryQueries.createBrand(brandData);
+    const brand = await Brand.create(brandData);
     
     res.status(201).json({
       success: true,
-      message: "Marca creada exitosamente",
-      data: brand
+      data: brand,
+      message: "Marca creada correctamente"
     });
   } catch (error) {
     next(error);
@@ -304,24 +262,24 @@ const createBrand = async (req, res, next) => {
 // Actualizar marca
 const updateBrand = async (req, res, next) => {
   try {
+    const { Brand } = require('../models');
     const brandId = parseInt(req.params.id);
-    const updateData = req.body;
+    const brandData = req.body;
 
-    // Verificar que la marca existe
-    const existingBrand = await categoryQueries.getBrandById(brandId);
-    if (!existingBrand) {
+    const brand = await Brand.findByPk(brandId);
+    if (!brand) {
       return res.status(404).json({
         success: false,
         error: "Marca no encontrada"
       });
     }
 
-    const brand = await categoryQueries.updateBrand(brandId, updateData);
+    await brand.update(brandData);
     
     res.json({
       success: true,
-      message: "Marca actualizada exitosamente",
-      data: brand
+      data: brand,
+      message: "Marca actualizada correctamente"
     });
   } catch (error) {
     next(error);
@@ -331,23 +289,34 @@ const updateBrand = async (req, res, next) => {
 // Eliminar marca
 const deleteBrand = async (req, res, next) => {
   try {
+    const { Brand, Product } = require('../models');
     const brandId = parseInt(req.params.id);
 
-    // Verificar que la marca existe
-    const existingBrand = await categoryQueries.getBrandById(brandId);
-    if (!existingBrand) {
+    const brand = await Brand.findByPk(brandId);
+    if (!brand) {
       return res.status(404).json({
         success: false,
         error: "Marca no encontrada"
       });
     }
 
-    const brand = await categoryQueries.deleteBrand(brandId);
+    // Verificar si tiene productos asociados
+    const productCount = await Product.count({
+      where: { brand_id: brandId, is_active: true }
+    });
+
+    if (productCount > 0) {
+      return res.status(400).json({
+        success: false,
+        error: "No se puede eliminar una marca que tiene productos asociados"
+      });
+    }
+
+    await brand.update({ is_active: false });
     
     res.json({
       success: true,
-      message: "Marca eliminada exitosamente",
-      data: brand
+      message: "Marca eliminada correctamente"
     });
   } catch (error) {
     next(error);
@@ -355,22 +324,29 @@ const deleteBrand = async (req, res, next) => {
 };
 
 // =====================================================
-// CONTROLADOR DE SERIES DE PRODUCTOS
+// CONTROLADOR DE SERIES
 // =====================================================
 
-// Obtener series de productos
-const getProductSeries = async (req, res, next) => {
+// Obtener todas las series
+const getAllSeries = async (req, res, next) => {
   try {
-    const filters = {
-      brand_id: req.query.brand_id ? parseInt(req.query.brand_id) : null,
-      category_id: req.query.category_id ? parseInt(req.query.category_id) : null
-    };
-
-    const series = await categoryQueries.getProductSeries(filters);
+    const { ProductSeries, Brand } = require('../models');
+    
+    const series = await ProductSeries.findAll({
+      where: { is_active: true },
+      include: [
+        {
+          model: Brand,
+          as: 'brand',
+          attributes: ['id', 'name']
+        }
+      ],
+      order: [['name', 'ASC']]
+    });
+    
     res.json({
       success: true,
-      data: series,
-      count: series.length
+      data: series
     });
   } catch (error) {
     next(error);
@@ -380,12 +356,22 @@ const getProductSeries = async (req, res, next) => {
 // Obtener serie por ID
 const getProductSeriesById = async (req, res, next) => {
   try {
-    const series = await categoryQueries.getProductSeriesById(parseInt(req.params.id));
+    const { ProductSeries, Brand } = require('../models');
+    
+    const series = await ProductSeries.findByPk(parseInt(req.params.id), {
+      include: [
+        {
+          model: Brand,
+          as: 'brand',
+          attributes: ['id', 'name']
+        }
+      ]
+    });
     
     if (!series) {
       return res.status(404).json({
         success: false,
-        error: "Serie de productos no encontrada"
+        error: "Serie no encontrada"
       });
     }
 
@@ -401,22 +387,23 @@ const getProductSeriesById = async (req, res, next) => {
 // Crear nueva serie
 const createProductSeries = async (req, res, next) => {
   try {
+    const { ProductSeries } = require('../models');
     const seriesData = req.body;
     
     // Validaciones básicas
-    if (!seriesData.name || !seriesData.brand_id || !seriesData.category_id) {
+    if (!seriesData.name || !seriesData.brand_id) {
       return res.status(400).json({
         success: false,
-        error: "Nombre, marca y categoría son requeridos"
+        error: "Nombre y marca son requeridos"
       });
     }
 
-    const series = await categoryQueries.createProductSeries(seriesData);
+    const series = await ProductSeries.create(seriesData);
     
     res.status(201).json({
       success: true,
-      message: "Serie de productos creada exitosamente",
-      data: series
+      data: series,
+      message: "Serie creada correctamente"
     });
   } catch (error) {
     next(error);
@@ -426,24 +413,25 @@ const createProductSeries = async (req, res, next) => {
 // Actualizar serie
 const updateProductSeries = async (req, res, next) => {
   try {
+    const { ProductSeries } = require('../models');
     const seriesId = parseInt(req.params.id);
-    const updateData = req.body;
+    const seriesData = req.body;
 
-    // Verificar que la serie existe
-    const existingSeries = await categoryQueries.getProductSeriesById(seriesId);
-    if (!existingSeries) {
+    const series = await ProductSeries.findByPk(seriesId);
+    
+    if (!series) {
       return res.status(404).json({
         success: false,
-        error: "Serie de productos no encontrada"
+        error: "Serie no encontrada"
       });
     }
 
-    const series = await categoryQueries.updateProductSeries(seriesId, updateData);
+    await series.update(seriesData);
     
     res.json({
       success: true,
-      message: "Serie de productos actualizada exitosamente",
-      data: series
+      data: series,
+      message: "Serie actualizada correctamente"
     });
   } catch (error) {
     next(error);
@@ -453,23 +441,49 @@ const updateProductSeries = async (req, res, next) => {
 // Eliminar serie
 const deleteProductSeries = async (req, res, next) => {
   try {
+    const { ProductSeries, Product } = require('../models');
     const seriesId = parseInt(req.params.id);
 
-    // Verificar que la serie existe
-    const existingSeries = await categoryQueries.getProductSeriesById(seriesId);
-    if (!existingSeries) {
+    const series = await ProductSeries.findByPk(seriesId);
+    
+    if (!series) {
       return res.status(404).json({
         success: false,
-        error: "Serie de productos no encontrada"
+        error: "Serie no encontrada"
       });
     }
 
-    const series = await categoryQueries.deleteProductSeries(seriesId);
+    // Verificar si tiene productos asociados
+    const productCount = await Product.count({
+      where: { series_id: seriesId, is_active: true }
+    });
+
+    if (productCount > 0) {
+      return res.status(400).json({
+        success: false,
+        error: "No se puede eliminar una serie que tiene productos asociados"
+      });
+    }
+
+    await series.update({ is_active: false });
     
     res.json({
       success: true,
-      message: "Serie de productos eliminada exitosamente",
-      data: series
+      message: "Serie eliminada correctamente"
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Obtener estadísticas
+const getCategoryStats = async (req, res, next) => {
+  try {
+    const stats = await CategoryService.getCategoryStats();
+    
+    res.json({
+      success: true,
+      data: stats
     });
   } catch (error) {
     next(error);
@@ -486,7 +500,6 @@ module.exports = {
   
   // Subcategorías
   getSubcategoriesByCategory,
-  getSubcategoryById,
   createSubcategory,
   updateSubcategory,
   deleteSubcategory,
@@ -498,10 +511,13 @@ module.exports = {
   updateBrand,
   deleteBrand,
   
-  // Series de Productos
-  getProductSeries,
+  // Series
+  getAllSeries,
   getProductSeriesById,
   createProductSeries,
   updateProductSeries,
-  deleteProductSeries
+  deleteProductSeries,
+  
+  // Estadísticas
+  getCategoryStats
 }; 

@@ -314,4 +314,52 @@ router.put('/:id', specificationController.updateProductSpecification);
 // Eliminar especificación
 router.delete('/:id', specificationController.deleteProductSpecification);
 
+/**
+ * @swagger
+ * /api/specifications/filter/products:
+ *   get:
+ *     summary: Filtrar productos por especificación
+ *     description: Filtra productos basándose en especificaciones específicas
+ *     tags: [Especificaciones]
+ *     parameters:
+ *       - in: query
+ *         name: specificationTypeId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID del tipo de especificación
+ *       - in: query
+ *         name: value
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Valor de la especificación
+ *       - in: query
+ *         name: dataType
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Tipo de dato de la especificación
+ *     responses:
+ *       200:
+ *         description: Productos filtrados por especificación
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Product'
+ *                 count:
+ *                   type: integer
+ *       400:
+ *         description: Parámetros inválidos
+ */
+// Filtrar productos por especificación
+router.get('/filter/products', specificationController.getProductsBySpecification);
+
 module.exports = router; 

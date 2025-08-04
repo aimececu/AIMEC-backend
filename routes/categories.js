@@ -210,7 +210,7 @@ router.delete('/brands/:id', categoryController.deleteBrand);
  *                   type: integer
  */
 // Obtener todas las series
-router.get('/series', categoryController.getProductSeries);
+router.get('/series', categoryController.getAllSeries);
 
 // Obtener serie por ID
 router.get('/series/:id', categoryController.getProductSeriesById);

@@ -1,5 +1,4 @@
-const productQueries = require('../database/queries/products');
-const specificationQueries = require('../database/queries/specifications');
+const ProductService = require('../services/ProductService');
 
 // =====================================================
 // CONTROLADOR DE PRODUCTOS
@@ -20,11 +19,17 @@ const getAllProducts = async (req, res, next) => {
       offset: req.query.offset ? parseInt(req.query.offset) : null
     };
 
-    const products = await productQueries.getAllProducts(filters);
+    const result = await ProductService.getAllProducts(filters);
+    
     res.json({
       success: true,
-      data: products,
-      count: products.length
+      data: result.products,
+      pagination: {
+        total: result.total,
+        limit: result.limit,
+        offset: result.offset,
+        hasMore: result.offset + result.products.length < result.total
+      }
     });
   } catch (error) {
     next(error);
@@ -34,7 +39,7 @@ const getAllProducts = async (req, res, next) => {
 // Obtener producto por ID
 const getProductById = async (req, res, next) => {
   try {
-    const product = await productQueries.getProductById(parseInt(req.params.id));
+    const product = await ProductService.getProductById(parseInt(req.params.id));
     
     if (!product) {
       return res.status(404).json({
@@ -43,15 +48,9 @@ const getProductById = async (req, res, next) => {
       });
     }
 
-    // Obtener especificaciones del producto
-    const specifications = await specificationQueries.getProductSpecificationsComplete(product.id);
-    
     res.json({
       success: true,
-      data: {
-        ...product,
-        specifications
-      }
+      data: product
     });
   } catch (error) {
     next(error);
@@ -61,7 +60,7 @@ const getProductById = async (req, res, next) => {
 // Obtener producto por slug
 const getProductBySlug = async (req, res, next) => {
   try {
-    const product = await productQueries.getProductBySlug(req.params.slug);
+    const product = await ProductService.getProductBySlug(req.params.slug);
     
     if (!product) {
       return res.status(404).json({
@@ -70,15 +69,9 @@ const getProductBySlug = async (req, res, next) => {
       });
     }
 
-    // Obtener especificaciones del producto
-    const specifications = await specificationQueries.getProductSpecificationsComplete(product.id);
-    
     res.json({
       success: true,
-      data: {
-        ...product,
-        specifications
-      }
+      data: product
     });
   } catch (error) {
     next(error);
@@ -98,12 +91,12 @@ const createProduct = async (req, res, next) => {
       });
     }
 
-    const product = await productQueries.createProduct(productData);
+    const product = await ProductService.createProduct(productData);
     
     res.status(201).json({
       success: true,
-      message: "Producto creado exitosamente",
-      data: product
+      data: product,
+      message: "Producto creado correctamente"
     });
   } catch (error) {
     next(error);
@@ -114,49 +107,30 @@ const createProduct = async (req, res, next) => {
 const updateProduct = async (req, res, next) => {
   try {
     const productId = parseInt(req.params.id);
-    const updateData = req.body;
+    const productData = req.body;
 
-    // Verificar que el producto existe
-    const existingProduct = await productQueries.getProductById(productId);
-    if (!existingProduct) {
-      return res.status(404).json({
-        success: false,
-        error: "Producto no encontrado"
-      });
-    }
-
-    const product = await productQueries.updateProduct(productId, updateData);
+    const product = await ProductService.updateProduct(productId, productData);
     
     res.json({
       success: true,
-      message: "Producto actualizado exitosamente",
-      data: product
+      data: product,
+      message: "Producto actualizado correctamente"
     });
   } catch (error) {
     next(error);
   }
 };
 
-// Eliminar producto (soft delete)
+// Eliminar producto
 const deleteProduct = async (req, res, next) => {
   try {
     const productId = parseInt(req.params.id);
-
-    // Verificar que el producto existe
-    const existingProduct = await productQueries.getProductById(productId);
-    if (!existingProduct) {
-      return res.status(404).json({
-        success: false,
-        error: "Producto no encontrado"
-      });
-    }
-
-    const product = await productQueries.deleteProduct(productId);
+    
+    const result = await ProductService.deleteProduct(productId);
     
     res.json({
       success: true,
-      message: "Producto eliminado exitosamente",
-      data: product
+      message: result.message
     });
   } catch (error) {
     next(error);
@@ -166,28 +140,36 @@ const deleteProduct = async (req, res, next) => {
 // Buscar productos
 const searchProducts = async (req, res, next) => {
   try {
-    const { q, category_id, brand_id, limit } = req.query;
+    const { q, category_id, brand_id, min_price, max_price, limit, offset } = req.query;
     
     if (!q) {
       return res.status(400).json({
         success: false,
-        error: "Término de búsqueda requerido"
+        error: "El término de búsqueda es requerido"
       });
     }
 
     const filters = {
       category_id: category_id ? parseInt(category_id) : null,
       brand_id: brand_id ? parseInt(brand_id) : null,
-      limit: limit ? parseInt(limit) : 20
+      min_price: min_price ? parseFloat(min_price) : null,
+      max_price: max_price ? parseFloat(max_price) : null,
+      limit: limit ? parseInt(limit) : null,
+      offset: offset ? parseInt(offset) : null
     };
 
-    const products = await productQueries.searchProducts(q, filters);
+    const result = await ProductService.searchProducts(q, filters);
     
     res.json({
       success: true,
-      data: products,
-      count: products.length,
-      searchTerm: q
+      data: result.products,
+      searchTerm: result.searchTerm,
+      pagination: {
+        total: result.total,
+        limit: filters.limit,
+        offset: filters.offset,
+        hasMore: filters.offset + result.products.length < result.total
+      }
     });
   } catch (error) {
     next(error);
@@ -198,12 +180,11 @@ const searchProducts = async (req, res, next) => {
 const getFeaturedProducts = async (req, res, next) => {
   try {
     const limit = req.query.limit ? parseInt(req.query.limit) : 10;
-    const products = await productQueries.getFeaturedProducts(limit);
+    const products = await ProductService.getFeaturedProducts(limit);
     
     res.json({
       success: true,
-      data: products,
-      count: products.length
+      data: products
     });
   } catch (error) {
     next(error);
@@ -216,13 +197,11 @@ const getProductsByCategory = async (req, res, next) => {
     const categoryId = parseInt(req.params.categoryId);
     const limit = req.query.limit ? parseInt(req.query.limit) : 20;
     
-    const products = await productQueries.getProductsByCategory(categoryId, limit);
+    const products = await ProductService.getProductsByCategory(categoryId, limit);
     
     res.json({
       success: true,
-      data: products,
-      count: products.length,
-      categoryId
+      data: products
     });
   } catch (error) {
     next(error);
@@ -233,13 +212,11 @@ const getProductsByCategory = async (req, res, next) => {
 const getProductsByBrand = async (req, res, next) => {
   try {
     const brandId = parseInt(req.params.brandId);
-    const products = await productQueries.getProductsByBrand(brandId);
+    const products = await ProductService.getProductsByBrand(brandId);
     
     res.json({
       success: true,
-      data: products,
-      count: products.length,
-      brandId
+      data: products
     });
   } catch (error) {
     next(error);
@@ -249,40 +226,11 @@ const getProductsByBrand = async (req, res, next) => {
 // Obtener estadísticas de productos
 const getProductStats = async (req, res, next) => {
   try {
-    const stats = await productQueries.getProductStats();
+    const stats = await ProductService.getProductStats();
     
     res.json({
       success: true,
       data: stats
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// Filtrar productos por especificación
-const getProductsBySpecification = async (req, res, next) => {
-  try {
-    const { specificationTypeId, value, dataType } = req.query;
-    
-    if (!specificationTypeId || !value || !dataType) {
-      return res.status(400).json({
-        success: false,
-        error: "ID de especificación, valor y tipo de dato son requeridos"
-      });
-    }
-
-    const products = await specificationQueries.getProductsBySpecification(
-      parseInt(specificationTypeId),
-      value,
-      dataType
-    );
-    
-    res.json({
-      success: true,
-      data: products,
-      count: products.length,
-      filter: { specificationTypeId, value, dataType }
     });
   } catch (error) {
     next(error);
@@ -300,6 +248,5 @@ module.exports = {
   getFeaturedProducts,
   getProductsByCategory,
   getProductsByBrand,
-  getProductStats,
-  getProductsBySpecification
+  getProductStats
 }; 

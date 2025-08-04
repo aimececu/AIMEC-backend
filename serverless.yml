@@ -31,3 +31,7 @@ custom:
     httpPort: 3750
     noPrependStageInUrl: true
     host: 0.0.0.0
+    cors: true
+    corsAllowOrigin: "*"
+    corsAllowHeaders: "Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token"
+    corsAllowCredentials: true

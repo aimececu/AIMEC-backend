@@ -1,0 +1,280 @@
+const { Category, Subcategory, Product } = require('../models');
+const { Op } = require('sequelize');
+
+class CategoryService {
+  // Obtener todas las categorías
+  async getAllCategories() {
+    try {
+      const categories = await Category.findAll({
+        where: { is_active: true },
+        include: [
+          {
+            model: Subcategory,
+            as: 'subcategories',
+            where: { is_active: true },
+            required: false,
+            attributes: ['id', 'name', 'slug', 'image']
+          }
+        ],
+        order: [
+          ['sort_order', 'ASC'],
+          ['name', 'ASC'],
+          [{ model: Subcategory, as: 'subcategories' }, 'sort_order', 'ASC']
+        ]
+      });
+
+      return categories;
+    } catch (error) {
+      throw new Error(`Error al obtener categorías: ${error.message}`);
+    }
+  }
+
+  // Obtener categoría por ID
+  async getCategoryById(id) {
+    try {
+      const category = await Category.findByPk(id, {
+        include: [
+          {
+            model: Subcategory,
+            as: 'subcategories',
+            where: { is_active: true },
+            required: false,
+            attributes: ['id', 'name', 'slug', 'image', 'description']
+          },
+          {
+            model: Product,
+            as: 'products',
+            where: { is_active: true },
+            required: false,
+            attributes: ['id', 'name', 'sku', 'price', 'main_image'],
+            limit: 10
+          }
+        ]
+      });
+
+      return category;
+    } catch (error) {
+      throw new Error(`Error al obtener categoría: ${error.message}`);
+    }
+  }
+
+  // Obtener categoría por slug
+  async getCategoryBySlug(slug) {
+    try {
+      const category = await Category.findOne({
+        where: { slug, is_active: true },
+        include: [
+          {
+            model: Subcategory,
+            as: 'subcategories',
+            where: { is_active: true },
+            required: false,
+            attributes: ['id', 'name', 'slug', 'image', 'description']
+          }
+        ]
+      });
+
+      return category;
+    } catch (error) {
+      throw new Error(`Error al obtener categoría por slug: ${error.message}`);
+    }
+  }
+
+  // Crear nueva categoría
+  async createCategory(categoryData) {
+    try {
+      // Validar slug único
+      const existingCategory = await Category.findOne({
+        where: { slug: categoryData.slug }
+      });
+
+      if (existingCategory) {
+        throw new Error('El slug ya existe');
+      }
+
+      const category = await Category.create(categoryData);
+      return category;
+    } catch (error) {
+      throw new Error(`Error al crear categoría: ${error.message}`);
+    }
+  }
+
+  // Actualizar categoría
+  async updateCategory(id, categoryData) {
+    try {
+      const category = await Category.findByPk(id);
+      if (!category) {
+        throw new Error('Categoría no encontrada');
+      }
+
+      // Validar slug único si se está cambiando
+      if (categoryData.slug && categoryData.slug !== category.slug) {
+        const existingCategory = await Category.findOne({
+          where: { slug: categoryData.slug }
+        });
+
+        if (existingCategory) {
+          throw new Error('El slug ya existe');
+        }
+      }
+
+      await category.update(categoryData);
+      return category;
+    } catch (error) {
+      throw new Error(`Error al actualizar categoría: ${error.message}`);
+    }
+  }
+
+  // Eliminar categoría (soft delete)
+  async deleteCategory(id) {
+    try {
+      const category = await Category.findByPk(id);
+      if (!category) {
+        throw new Error('Categoría no encontrada');
+      }
+
+      // Verificar si tiene productos asociados
+      const productCount = await Product.count({
+        where: { category_id: id, is_active: true }
+      });
+
+      if (productCount > 0) {
+        throw new Error('No se puede eliminar una categoría que tiene productos asociados');
+      }
+
+      await category.update({ is_active: false });
+      return { message: 'Categoría eliminada correctamente' };
+    } catch (error) {
+      throw new Error(`Error al eliminar categoría: ${error.message}`);
+    }
+  }
+
+  // Obtener subcategorías de una categoría
+  async getSubcategoriesByCategory(categoryId) {
+    try {
+      const subcategories = await Subcategory.findAll({
+        where: { category_id: categoryId, is_active: true },
+        include: [
+          {
+            model: Category,
+            as: 'category',
+            attributes: ['id', 'name', 'slug']
+          }
+        ],
+        order: [['sort_order', 'ASC'], ['name', 'ASC']]
+      });
+
+      return subcategories;
+    } catch (error) {
+      throw new Error(`Error al obtener subcategorías: ${error.message}`);
+    }
+  }
+
+  // Crear subcategoría
+  async createSubcategory(subcategoryData) {
+    try {
+      // Validar que la categoría padre existe
+      const parentCategory = await Category.findByPk(subcategoryData.category_id);
+      if (!parentCategory) {
+        throw new Error('La categoría padre no existe');
+      }
+
+      // Validar slug único
+      const existingSubcategory = await Subcategory.findOne({
+        where: { slug: subcategoryData.slug }
+      });
+
+      if (existingSubcategory) {
+        throw new Error('El slug ya existe');
+      }
+
+      const subcategory = await Subcategory.create(subcategoryData);
+      return subcategory;
+    } catch (error) {
+      throw new Error(`Error al crear subcategoría: ${error.message}`);
+    }
+  }
+
+  // Actualizar subcategoría
+  async updateSubcategory(id, subcategoryData) {
+    try {
+      const subcategory = await Subcategory.findByPk(id);
+      if (!subcategory) {
+        throw new Error('Subcategoría no encontrada');
+      }
+
+      // Validar slug único si se está cambiando
+      if (subcategoryData.slug && subcategoryData.slug !== subcategory.slug) {
+        const existingSubcategory = await Subcategory.findOne({
+          where: { slug: subcategoryData.slug }
+        });
+
+        if (existingSubcategory) {
+          throw new Error('El slug ya existe');
+        }
+      }
+
+      await subcategory.update(subcategoryData);
+      return subcategory;
+    } catch (error) {
+      throw new Error(`Error al actualizar subcategoría: ${error.message}`);
+    }
+  }
+
+  // Eliminar subcategoría (soft delete)
+  async deleteSubcategory(id) {
+    try {
+      const subcategory = await Subcategory.findByPk(id);
+      if (!subcategory) {
+        throw new Error('Subcategoría no encontrada');
+      }
+
+      // Verificar si tiene productos asociados
+      const productCount = await Product.count({
+        where: { subcategory_id: id, is_active: true }
+      });
+
+      if (productCount > 0) {
+        throw new Error('No se puede eliminar una subcategoría que tiene productos asociados');
+      }
+
+      await subcategory.update({ is_active: false });
+      return { message: 'Subcategoría eliminada correctamente' };
+    } catch (error) {
+      throw new Error(`Error al eliminar subcategoría: ${error.message}`);
+    }
+  }
+
+  // Obtener estadísticas de categorías
+  async getCategoryStats() {
+    try {
+      const totalCategories = await Category.count({ where: { is_active: true } });
+      const totalSubcategories = await Subcategory.count({ where: { is_active: true } });
+      
+      const categoriesWithProducts = await Category.findAll({
+        where: { is_active: true },
+        include: [
+          {
+            model: Product,
+            as: 'products',
+            where: { is_active: true },
+            required: false,
+            attributes: []
+          }
+        ],
+        attributes: ['id', 'name'],
+        group: ['Category.id']
+      });
+
+      return {
+        totalCategories,
+        totalSubcategories,
+        categoriesWithProducts: categoriesWithProducts.length
+      };
+    } catch (error) {
+      throw new Error(`Error al obtener estadísticas de categorías: ${error.message}`);
+    }
+  }
+}
+
+module.exports = new CategoryService(); 

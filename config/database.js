@@ -1,49 +1,40 @@
-const { Pool } = require('pg');
+const { Sequelize } = require('sequelize');
 const config = require('./env');
 
-// Configuración de la base de datos
-const pool = new Pool({
-  host: config.database.host,
-  port: config.database.port,
-  database: config.database.name,
-  user: config.database.user,
-  password: config.database.password,
-  // Configuraciones adicionales para producción
-  max: 20, // máximo número de conexiones en el pool
-  idleTimeoutMillis: 30000, // tiempo de inactividad antes de cerrar conexión
-  connectionTimeoutMillis: 2000, // tiempo máximo para establecer conexión
-});
-
-// Configurar el esquema en cada conexión del pool
-pool.on('connect', async (client) => {
-  try {
-    await client.query(`SET search_path TO ${config.database.schema}, public`);
-  } catch (error) {
-    console.warn('⚠️  No se pudo establecer el esquema en la conexión:', error.message);
+// Configuración de Sequelize
+const sequelize = new Sequelize(
+  config.database.name,
+  config.database.user,
+  config.database.password,
+  {
+    host: config.database.host,
+    port: config.database.port,
+    dialect: 'postgres',
+    schema: config.database.schema,
+    logging: config.nodeEnv === 'development' ? console.log : false,
+    pool: {
+      max: 20,
+      min: 0,
+      acquire: 30000,
+      idle: 10000
+    },
+    define: {
+      timestamps: true,
+      underscored: true,
+      freezeTableName: true
+    },
+    dialectOptions: {
+      searchPath: config.database.schema
+    }
   }
-});
-
-// Configurar el esquema por defecto
-const setSchema = async (client) => {
-  try {
-    await client.query(`SET search_path TO ${config.database.schema}, public`);
-  } catch (error) {
-    console.warn('⚠️  No se pudo establecer el esquema:', error.message);
-  }
-};
+);
 
 // Función para probar la conexión
 const testConnection = async () => {
   try {
-    const client = await pool.connect();
-    
-    // Configurar el esquema
-    await setSchema(client);
-    
+    await sequelize.authenticate();
     console.log('✅ Conexión a la base de datos establecida correctamente');
     console.log(`📁 Usando esquema: ${config.database.schema}`);
-    
-    client.release();
     return true;
   } catch (error) {
     console.error('❌ Error al conectar con la base de datos:', error.message);
@@ -51,14 +42,27 @@ const testConnection = async () => {
   }
 };
 
-// Función para cerrar el pool de conexiones
-const closePool = async () => {
-  await pool.end();
-  console.log('🔌 Pool de conexiones cerrado');
+// Función para sincronizar modelos
+const syncDatabase = async (force = false) => {
+  try {
+    await sequelize.sync({ force });
+    console.log('✅ Base de datos sincronizada');
+    return true;
+  } catch (error) {
+    console.error('❌ Error al sincronizar la base de datos:', error.message);
+    return false;
+  }
+};
+
+// Función para cerrar la conexión
+const closeConnection = async () => {
+  await sequelize.close();
+  console.log('🔌 Conexión a la base de datos cerrada');
 };
 
 module.exports = {
-  pool,
+  sequelize,
   testConnection,
-  closePool
+  syncDatabase,
+  closeConnection
 }; 

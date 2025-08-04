@@ -1,5 +1,6 @@
 const app = require('./app');
 const os = require('os');
+const logger = require('./config/logger');
 
 const PORT = process.env.PORT || 3750;
 
@@ -20,11 +21,6 @@ const getLocalIP = () => {
 const HOST = getLocalIP();
 
 app.listen(PORT, HOST, () => {
-  console.log(`🚀 Servidor corriendo en http://${HOST}:${PORT}`);
-  console.log(`📚 Documentación Swagger: http://${HOST}:${PORT}/api-docs`);
-  console.log(`🔍 Health check: http://${HOST}:${PORT}/health`);
-  console.log(`🌐 API base: http://${HOST}:${PORT}`);
-  console.log(`   http://localhost:${PORT}/api-docs`);
-  console.log('');
-  console.log('⏹️  Presiona Ctrl+C para detener el servidor');
+  logger.serverStart(PORT, HOST);
+  logger.info('⏹️  Presiona Ctrl+C para detener el servidor');
 }); 
