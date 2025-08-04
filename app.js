@@ -11,6 +11,7 @@ const logger = require('./config/logger');
 const productRoutes = require('./routes/products');
 const categoryRoutes = require('./routes/categories');
 const specificationRoutes = require('./routes/specifications');
+const authRoutes = require('./routes/auth');
 
 const app = express();
 
@@ -134,7 +135,8 @@ app.get("/", (req, res) => {
       apiDocs: "/api-docs",
       products: "/api/products",
       categories: "/api/categories",
-      specifications: "/api/specifications"
+      specifications: "/api/specifications",
+      auth: "/api/auth"
     }
   });
 });
@@ -151,6 +153,9 @@ app.use("/api/categories", categoryRoutes);
 
 // Rutas de especificaciones
 app.use("/api/specifications", specificationRoutes);
+
+// Rutas de autenticación
+app.use("/api/auth", authRoutes);
 
 // =====================================================
 // MIDDLEWARE DE MANEJO DE ERRORES
