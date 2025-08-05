@@ -23,6 +23,31 @@ const ProductFeature = sequelize.define('ProductFeature', {
       key: 'id'
     }
   },
+  title: {
+    type: DataTypes.STRING(200),
+    allowNull: true,
+    validate: {
+      notEmpty: true
+    }
+  },
+  description: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
+  icon: {
+    type: DataTypes.STRING(100),
+    allowNull: true
+  },
+  sort_order: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 0
+  },
+  is_active: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: true
+  },
   created_at: {
     type: DataTypes.DATE,
     allowNull: false,
@@ -45,10 +70,6 @@ const ProductFeature = sequelize.define('ProductFeature', {
     },
     {
       fields: ['feature_id']
-    },
-    {
-      unique: true,
-      fields: ['product_id', 'feature_id']
     }
   ]
 });

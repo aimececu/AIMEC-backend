@@ -92,6 +92,56 @@ const Product = sequelize.define('Product', {
     type: DataTypes.STRING(100),
     allowNull: true
   },
+  voltage: {
+    type: DataTypes.DECIMAL(8, 2),
+    allowNull: true,
+    comment: 'Voltaje en V'
+  },
+  power: {
+    type: DataTypes.DECIMAL(8, 2),
+    allowNull: true,
+    comment: 'Potencia en W'
+  },
+  temperature_range: {
+    type: DataTypes.STRING(100),
+    allowNull: true,
+    comment: 'Rango de temperatura de operación'
+  },
+  ip_rating: {
+    type: DataTypes.STRING(20),
+    allowNull: true,
+    comment: 'Clasificación IP'
+  },
+  material: {
+    type: DataTypes.STRING(100),
+    allowNull: true,
+    comment: 'Material del producto'
+  },
+  color: {
+    type: DataTypes.STRING(50),
+    allowNull: true,
+    comment: 'Color del producto'
+  },
+  country_of_origin: {
+    type: DataTypes.STRING(100),
+    allowNull: true,
+    comment: 'País de origen'
+  },
+  compliance: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    comment: 'Certificaciones y cumplimiento'
+  },
+  manual_url: {
+    type: DataTypes.STRING(500),
+    allowNull: true,
+    comment: 'URL del manual de usuario'
+  },
+  datasheet_url: {
+    type: DataTypes.STRING(500),
+    allowNull: true,
+    comment: 'URL de la hoja de datos'
+  },
   brand_id: {
     type: DataTypes.INTEGER,
     allowNull: true,
@@ -180,6 +230,25 @@ const Product = sequelize.define('Product', {
   meta_keywords: {
     type: DataTypes.TEXT,
     allowNull: true
+  },
+  rating: {
+    type: DataTypes.DECIMAL(3, 2),
+    allowNull: true,
+    defaultValue: 0,
+    validate: {
+      min: 0,
+      max: 5
+    },
+    comment: 'Calificación promedio del producto (0-5)'
+  },
+  review_count: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 0,
+    validate: {
+      min: 0
+    },
+    comment: 'Número total de reseñas'
   },
   // tags: {
   //   type: DataTypes.JSONB,

@@ -1,4 +1,4 @@
-const { Product, Brand, Category, Subcategory, ProductSeries, ProductSpecification, SpecificationType } = require('../models');
+const { Product, Brand, Category, Subcategory, ProductSeries, ProductSpecification, SpecificationType, Application, ProductApplication, ProductRelated, ProductFeature, Feature, Certification, ProductCertification } = require('../models');
 const { Op } = require('sequelize');
 
 class ProductService {
@@ -27,6 +27,19 @@ class ProductService {
           as: 'series',
           attributes: ['id', 'name']
         }
+      ];
+
+      // Atributos específicos del producto
+      const productAttributes = [
+        'id', 'sku', 'name', 'description', 'short_description',
+        'price', 'original_price', 'cost_price', 'stock_quantity', 'min_stock_level',
+        'warranty_months', 'lead_time_days', 'weight', 'dimensions',
+        'voltage', 'power', 'temperature_range', 'ip_rating', 'material', 'color',
+        'country_of_origin', 'compliance', 'manual_url', 'datasheet_url',
+        'additional_images', 'main_image', 'is_featured', 'is_active',
+        'meta_title', 'meta_description', 'meta_keywords',
+        'brand_id', 'category_id', 'subcategory_id', 'series_id',
+        'created_at', 'updated_at'
       ];
 
       // Aplicar filtros
@@ -61,6 +74,7 @@ class ProductService {
       const options = {
         where: whereClause,
         include: includeClause,
+        attributes: productAttributes,
         order: [['created_at', 'DESC']]
       };
 
@@ -89,6 +103,17 @@ class ProductService {
   async getProductById(id) {
     try {
       const product = await Product.findByPk(id, {
+        attributes: [
+          'id', 'sku', 'name', 'description', 'short_description',
+          'price', 'original_price', 'cost_price', 'stock_quantity', 'min_stock_level',
+          'warranty_months', 'lead_time_days', 'weight', 'dimensions',
+          'voltage', 'power', 'temperature_range', 'ip_rating', 'material', 'color',
+          'country_of_origin', 'compliance', 'manual_url', 'datasheet_url',
+          'additional_images', 'main_image', 'is_featured', 'is_active',
+          'meta_title', 'meta_description', 'meta_keywords',
+          'brand_id', 'category_id', 'subcategory_id', 'series_id',
+          'created_at', 'updated_at'
+        ],
         include: [
           {
             model: Brand,
@@ -118,6 +143,57 @@ class ProductService {
                 model: SpecificationType,
                 as: 'specificationType',
                 attributes: ['id', 'name', 'unit', 'data_type']
+              }
+            ]
+          },
+          {
+            model: ProductApplication,
+            as: 'applications',
+            include: [
+              {
+                model: Application,
+                as: 'application',
+                attributes: ['id', 'name', 'description', 'icon']
+              }
+            ]
+          },
+          {
+            model: ProductFeature,
+            as: 'features',
+            include: [
+              {
+                model: Feature,
+                as: 'feature',
+                attributes: ['id', 'name', 'description']
+              }
+            ]
+          },
+          {
+            model: ProductCertification,
+            as: 'certifications',
+            include: [
+              {
+                model: Certification,
+                as: 'certification',
+                attributes: ['id', 'name', 'description']
+              }
+            ]
+          },
+          {
+            model: ProductRelated,
+            as: 'relatedProducts',
+            include: [
+              {
+                model: Product,
+                as: 'relatedProduct',
+                attributes: ['id', 'name', 'price', 'main_image'],
+                include: [
+                  {
+                    model: Brand,
+                    as: 'brand',
+                    attributes: ['id', 'name']
+                  }
+                ]
               }
             ]
           }
@@ -393,8 +469,18 @@ class ProductService {
   async getProductStats() {
     try {
       const totalProducts = await Product.count({ where: { is_active: true } });
-      const featuredProducts = await Product.count({ where: { is_featured: true, is_active: true } });
-      const outOfStockProducts = await Product.count({ where: { stock_quantity: 0, is_active: true } });
+      const inStockProducts = await Product.count({ 
+        where: { 
+          stock_quantity: { [Op.gt]: 0 }, 
+          is_active: true 
+        } 
+      });
+      const outOfStockProducts = await Product.count({ 
+        where: { 
+          stock_quantity: 0, 
+          is_active: true 
+        } 
+      });
       const lowStockProducts = await Product.count({
         where: {
           stock_quantity: { [Op.lte]: 10 },
@@ -404,10 +490,10 @@ class ProductService {
       });
 
       return {
-        total: totalProducts,
-        featured: featuredProducts,
-        outOfStock: outOfStockProducts,
-        lowStock: lowStockProducts
+        total_products: totalProducts,
+        in_stock: inStockProducts,
+        out_of_stock: outOfStockProducts,
+        low_stock: lowStockProducts
       };
     } catch (error) {
       throw new Error(`Error al obtener estadísticas: ${error.message}`);

@@ -1,5 +1,7 @@
 const { Sequelize } = require('sequelize');
 const config = require('./env');
+const fs = require('fs');
+const path = require('path');
 
 // Configuración de Sequelize
 const sequelize = new Sequelize(
@@ -42,23 +44,91 @@ const testConnection = async () => {
   }
 };
 
-// Función para sincronizar modelos
-const syncDatabase = async (force = false) => {
+// Función para obtener el hash de los modelos (para detectar cambios)
+const getModelsHash = () => {
+  const modelsDir = path.join(__dirname, '../models');
+  const modelFiles = fs.readdirSync(modelsDir)
+    .filter(file => file.endsWith('.js') && file !== 'index.js')
+    .sort();
+  
+  let hash = '';
+  modelFiles.forEach(file => {
+    const filePath = path.join(modelsDir, file);
+    const stats = fs.statSync(filePath);
+    hash += `${file}:${stats.mtime.getTime()}`;
+  });
+  
+  return require('crypto').createHash('md5').update(hash).digest('hex');
+};
+
+// Función para guardar el hash de los modelos
+const saveModelsHash = (hash) => {
+  const hashFile = path.join(__dirname, '../.models-hash');
+  fs.writeFileSync(hashFile, hash);
+};
+
+// Función para obtener el hash guardado
+const getSavedModelsHash = () => {
+  const hashFile = path.join(__dirname, '../.models-hash');
+  if (fs.existsSync(hashFile)) {
+    return fs.readFileSync(hashFile, 'utf8');
+  }
+  return null;
+};
+
+// Función para limpiar restricciones problemáticas
+const cleanConstraints = async () => {
   try {
-    // Importar todos los modelos para que Sequelize los reconozca
-    require('../models');
+    console.log('🧹 Limpiando restricciones problemáticas...');
     
-    await sequelize.sync({ force });
-    console.log('✅ Base de datos sincronizada');
+    // Deshabilitar verificación de claves foráneas temporalmente
+    await sequelize.query('SET session_replication_role = replica;');
     
-    // Si es force sync, crear datos de ejemplo
-    if (force) {
-      await createSampleData();
+    // Limpiar restricciones de subcategories si existen
+    try {
+      await sequelize.query(`
+        ALTER TABLE "aimec_products"."subcategories" 
+        DROP CONSTRAINT IF EXISTS "subcategories_category_id_fkey";
+      `);
+    } catch (e) {
+      // Ignorar errores si la restricción no existe
     }
     
-    return true;
+    // Rehabilitar verificación de claves foráneas
+    await sequelize.query('SET session_replication_role = DEFAULT;');
+    
+    console.log('✅ Restricciones limpiadas');
   } catch (error) {
-    console.error('❌ Error al sincronizar la base de datos:', error.message);
+    console.log('⚠️  No se pudieron limpiar restricciones:', error.message);
+  }
+};
+
+// Función para sincronización inteligente
+const smartSync = async () => {
+  try {
+    const currentHash = getModelsHash();
+    const savedHash = getSavedModelsHash();
+    
+    // Si no hay hash guardado o ha cambiado, sincronizar
+    if (!savedHash || currentHash !== savedHash) {
+      console.log('🔄 Detectados cambios en los modelos, usando sincronización inteligente...');
+      
+      // Usar el script inteligente mejorado
+      const { smartSync: improvedSmartSync } = require('../smart-sync');
+      const result = await improvedSmartSync();
+      
+      if (result) {
+        // Guardar el nuevo hash
+        saveModelsHash(currentHash);
+      }
+      
+      return result;
+    } else {
+      console.log('✅ Los modelos están sincronizados, no se requieren cambios');
+      return true;
+    }
+  } catch (error) {
+    console.error('❌ Error en sincronización inteligente:', error.message);
     return false;
   }
 };
@@ -67,6 +137,15 @@ const syncDatabase = async (force = false) => {
 const createSampleData = async () => {
   try {
     const { Brand, Category, Subcategory, Product, SpecificationType } = require('../models');
+    
+    // Verificar si ya existen datos
+    const existingBrands = await Brand.count();
+    if (existingBrands > 0) {
+      console.log('ℹ️  Ya existen datos en la base, saltando creación de datos de ejemplo');
+      return;
+    }
+    
+    console.log('📝 Creando datos de ejemplo...');
     
     // Crear marcas de ejemplo
     const brands = await Brand.bulkCreate([
@@ -142,6 +221,6 @@ const closeConnection = async () => {
 module.exports = {
   sequelize,
   testConnection,
-  syncDatabase,
+  smartSync,
   closeConnection
 }; 

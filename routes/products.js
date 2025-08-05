@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const productController = require('../controllers/products');
+const { verifySession, requireAdmin } = require('../controllers/auth');
 
 // =====================================================
 // RUTAS DE PRODUCTOS
@@ -340,7 +341,7 @@ router.get('/:id', productController.getProductById);
  *         description: Datos inválidos
  */
 // Crear nuevo producto
-router.post('/', productController.createProduct);
+router.post('/', verifySession, requireAdmin, productController.createProduct);
 
 /**
  * @swagger
@@ -426,9 +427,9 @@ router.post('/', productController.createProduct);
  *         description: Producto no encontrado
  */
 // Actualizar producto
-router.put('/:id', productController.updateProduct);
+router.put('/:id', verifySession, requireAdmin, productController.updateProduct);
 
 // Eliminar producto
-router.delete('/:id', productController.deleteProduct);
+router.delete('/:id', verifySession, requireAdmin, productController.deleteProduct);
 
 module.exports = router; 

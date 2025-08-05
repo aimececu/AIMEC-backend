@@ -26,7 +26,8 @@ const corsOptions = {
     'X-Requested-With',
     'Accept',
     'Origin',
-    'Session-ID'
+    'Session-ID',
+    'X-Session-ID'
   ],
   exposedHeaders: ['Content-Length', 'X-Requested-With'],
   maxAge: 86400 // 24 horas

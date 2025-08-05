@@ -12,6 +12,9 @@ const productRoutes = require('./routes/products');
 const categoryRoutes = require('./routes/categories');
 const specificationRoutes = require('./routes/specifications');
 const authRoutes = require('./routes/auth');
+const applicationRoutes = require('./routes/applications');
+const productRelatedRoutes = require('./routes/productRelated');
+const productFeaturesRoutes = require('./routes/productFeatures');
 
 const app = express();
 
@@ -27,11 +30,13 @@ setupMiddlewares(app);
 // MIDDLEWARE DE BASE DE DATOS
 // =====================================================
 
-// Middleware para probar conexión a base de datos
+// Middleware para inicializar base de datos automáticamente
 app.use(async (req, res, next) => {
   if (!req.app.locals.dbInitialized) {
     try {
+      // Solo probar conexión, sin sincronización automática
       await testConnection();
+      
       req.app.locals.dbInitialized = true;
       logger.databaseConnected();
     } catch (error) {
@@ -133,12 +138,13 @@ app.get("/", (req, res) => {
     message: "API AIMEC - Sistema de Gestión de Productos Industriales",
     version: "1.0.0",
     endpoints: {
-      health: "/health",
-      apiDocs: "/api-docs",
-      products: "/api/products",
-      categories: "/api/categories",
-      specifications: "/api/specifications",
-      auth: "/api/auth"
+              health: "/health",
+        apiDocs: "/api-docs",
+        products: "/api/products",
+        categories: "/api/categories",
+        specifications: "/api/specifications",
+        applications: "/api/applications",
+        auth: "/api/auth"
     }
   });
 });
@@ -169,6 +175,15 @@ app.use("/api/specifications", specificationRoutes);
 
 // Rutas de autenticación
 app.use("/api/auth", authRoutes);
+
+// Rutas de aplicaciones
+app.use("/api/applications", applicationRoutes);
+
+// Rutas de productos relacionados
+app.use("/api/products", productRelatedRoutes);
+
+// Rutas de características de productos
+app.use("/api/products", productFeaturesRoutes);
 
 // =====================================================
 // MIDDLEWARE DE MANEJO DE ERRORES

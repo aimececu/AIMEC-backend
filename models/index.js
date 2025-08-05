@@ -1,21 +1,23 @@
 const { sequelize } = require('../config/database');
 
-// Importar modelos
+// Importar modelos base primero
+const User = require('./User');
 const Brand = require('./Brand');
 const Category = require('./Category');
 const Subcategory = require('./Subcategory');
 const ProductSeries = require('./ProductSeries');
 const Product = require('./Product');
 const SpecificationType = require('./SpecificationType');
-const ProductSpecification = require('./ProductSpecification');
-const Accessory = require('./Accessory');
-const RelatedProduct = require('./RelatedProduct');
 const Feature = require('./Feature');
-const ProductFeature = require('./ProductFeature');
-const Application = require('./Application');
-const ProductApplication = require('./ProductApplication');
 const Certification = require('./Certification');
+const Application = require('./Application');
+
+// Importar modelos de relación después
+const ProductSpecification = require('./ProductSpecification');
+const ProductFeature = require('./ProductFeature');
 const ProductCertification = require('./ProductCertification');
+const ProductApplication = require('./ProductApplication');
+const ProductRelated = require('./ProductRelated');
 
 // =====================================================
 // DEFINICIÓN DE ASOCIACIONES
@@ -51,29 +53,24 @@ ProductSpecification.belongsTo(SpecificationType, { foreignKey: 'specification_t
 Product.hasMany(ProductSpecification, { foreignKey: 'product_id', as: 'specifications' });
 SpecificationType.hasMany(ProductSpecification, { foreignKey: 'specification_type_id', as: 'productSpecifications' });
 
-// Asociaciones de Accessory
-Accessory.belongsTo(Product, { foreignKey: 'product_id', as: 'product' });
-Accessory.belongsTo(Product, { foreignKey: 'accessory_id', as: 'accessory' });
-Product.hasMany(Accessory, { foreignKey: 'product_id', as: 'accessories' });
+// Asociaciones de ProductRelated (productos relacionados, accesorios, etc.)
+ProductRelated.belongsTo(Product, { foreignKey: 'product_id', as: 'product' });
+ProductRelated.belongsTo(Product, { foreignKey: 'related_product_id', as: 'relatedProduct' });
+Product.hasMany(ProductRelated, { foreignKey: 'product_id', as: 'relatedProducts' });
 
-// Asociaciones de RelatedProduct
-RelatedProduct.belongsTo(Product, { foreignKey: 'product_id', as: 'product' });
-RelatedProduct.belongsTo(Product, { foreignKey: 'related_product_id', as: 'relatedProduct' });
-Product.hasMany(RelatedProduct, { foreignKey: 'product_id', as: 'relatedProducts' });
-
-// Asociaciones de ProductFeature
+// Asociaciones de ProductFeature (características)
 ProductFeature.belongsTo(Product, { foreignKey: 'product_id', as: 'product' });
 ProductFeature.belongsTo(Feature, { foreignKey: 'feature_id', as: 'feature' });
 Product.hasMany(ProductFeature, { foreignKey: 'product_id', as: 'features' });
 Feature.hasMany(ProductFeature, { foreignKey: 'feature_id', as: 'productFeatures' });
 
-// Asociaciones de ProductApplication
+// Asociaciones de ProductApplication (aplicaciones)
 ProductApplication.belongsTo(Product, { foreignKey: 'product_id', as: 'product' });
 ProductApplication.belongsTo(Application, { foreignKey: 'application_id', as: 'application' });
 Product.hasMany(ProductApplication, { foreignKey: 'product_id', as: 'applications' });
 Application.hasMany(ProductApplication, { foreignKey: 'application_id', as: 'productApplications' });
 
-// Asociaciones de ProductCertification
+// Asociaciones de ProductCertification (certificaciones)
 ProductCertification.belongsTo(Product, { foreignKey: 'product_id', as: 'product' });
 ProductCertification.belongsTo(Certification, { foreignKey: 'certification_id', as: 'certification' });
 Product.hasMany(ProductCertification, { foreignKey: 'product_id', as: 'certifications' });
@@ -81,6 +78,7 @@ Certification.hasMany(ProductCertification, { foreignKey: 'certification_id', as
 
 module.exports = {
   sequelize,
+  User,
   Brand,
   Category,
   Subcategory,
@@ -88,12 +86,11 @@ module.exports = {
   Product,
   SpecificationType,
   ProductSpecification,
-  Accessory,
-  RelatedProduct,
-  Feature,
-  ProductFeature,
   Application,
   ProductApplication,
+  ProductRelated,
+  ProductFeature,
+  Feature,
   Certification,
   ProductCertification
 }; 

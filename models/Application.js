@@ -8,7 +8,7 @@ const Application = sequelize.define('Application', {
     autoIncrement: true
   },
   name: {
-    type: DataTypes.STRING(100),
+    type: DataTypes.STRING(200),
     allowNull: false,
     validate: {
       notEmpty: true
@@ -26,6 +26,11 @@ const Application = sequelize.define('Application', {
     type: DataTypes.BOOLEAN,
     allowNull: false,
     defaultValue: true
+  },
+  sort_order: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 0
   },
   created_at: {
     type: DataTypes.DATE,
