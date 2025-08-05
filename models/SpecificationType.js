@@ -14,6 +14,13 @@ const SpecificationType = sequelize.define('SpecificationType', {
       notEmpty: true
     }
   },
+  display_name: {
+    type: DataTypes.STRING(100),
+    allowNull: false,
+    validate: {
+      notEmpty: true
+    }
+  },
   description: {
     type: DataTypes.TEXT,
     allowNull: true
@@ -23,14 +30,22 @@ const SpecificationType = sequelize.define('SpecificationType', {
     allowNull: true
   },
   data_type: {
-    type: DataTypes.ENUM('string', 'number', 'boolean', 'date'),
+    type: DataTypes.ENUM('text', 'number', 'boolean', 'select', 'range'),
     allowNull: false,
-    defaultValue: 'string'
+    defaultValue: 'text'
   },
   is_required: {
     type: DataTypes.BOOLEAN,
     allowNull: false,
     defaultValue: false
+  },
+  category_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'categories',
+      key: 'id'
+    }
   },
   sort_order: {
     type: DataTypes.INTEGER,

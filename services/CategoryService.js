@@ -13,7 +13,7 @@ class CategoryService {
             as: 'subcategories',
             where: { is_active: true },
             required: false,
-            attributes: ['id', 'name', 'slug', 'image']
+            attributes: ['id', 'name', 'image']
           }
         ],
         order: [
@@ -39,7 +39,7 @@ class CategoryService {
             as: 'subcategories',
             where: { is_active: true },
             required: false,
-            attributes: ['id', 'name', 'slug', 'image', 'description']
+            attributes: ['id', 'name', 'image', 'description']
           },
           {
             model: Product,
@@ -58,39 +58,33 @@ class CategoryService {
     }
   }
 
-  // Obtener categoría por slug
-  async getCategoryBySlug(slug) {
-    try {
-      const category = await Category.findOne({
-        where: { slug, is_active: true },
-        include: [
-          {
-            model: Subcategory,
-            as: 'subcategories',
-            where: { is_active: true },
-            required: false,
-            attributes: ['id', 'name', 'slug', 'image', 'description']
-          }
-        ]
-      });
+  // Obtener categoría por slug (deshabilitado - no hay columna slug)
+  // async getCategoryBySlug(slug) {
+  //   try {
+  //     const category = await Category.findOne({
+  //       where: { slug, is_active: true },
+  //       include: [
+  //         {
+  //           model: Subcategory,
+  //           as: 'subcategories',
+  //           where: { is_active: true },
+  //           required: false,
+  //           attributes: ['id', 'name', 'image', 'description']
+  //         }
+  //       ]
+  //     });
 
-      return category;
-    } catch (error) {
-      throw new Error(`Error al obtener categoría por slug: ${error.message}`);
-    }
-  }
+  //     return category;
+  //   } catch (error) {
+  //     throw new Error(`Error al obtener categoría por slug: ${error.message}`);
+  //   }
+  // }
 
   // Crear nueva categoría
   async createCategory(categoryData) {
     try {
-      // Validar slug único
-      const existingCategory = await Category.findOne({
-        where: { slug: categoryData.slug }
-      });
-
-      if (existingCategory) {
-        throw new Error('El slug ya existe');
-      }
+      // Remover slug si existe en los datos
+      delete categoryData.slug;
 
       const category = await Category.create(categoryData);
       return category;
@@ -107,16 +101,8 @@ class CategoryService {
         throw new Error('Categoría no encontrada');
       }
 
-      // Validar slug único si se está cambiando
-      if (categoryData.slug && categoryData.slug !== category.slug) {
-        const existingCategory = await Category.findOne({
-          where: { slug: categoryData.slug }
-        });
-
-        if (existingCategory) {
-          throw new Error('El slug ya existe');
-        }
-      }
+      // Remover slug si existe en los datos
+      delete categoryData.slug;
 
       await category.update(categoryData);
       return category;
@@ -158,7 +144,7 @@ class CategoryService {
           {
             model: Category,
             as: 'category',
-            attributes: ['id', 'name', 'slug']
+            attributes: ['id', 'name']
           }
         ],
         order: [['sort_order', 'ASC'], ['name', 'ASC']]
@@ -179,14 +165,8 @@ class CategoryService {
         throw new Error('La categoría padre no existe');
       }
 
-      // Validar slug único
-      const existingSubcategory = await Subcategory.findOne({
-        where: { slug: subcategoryData.slug }
-      });
-
-      if (existingSubcategory) {
-        throw new Error('El slug ya existe');
-      }
+      // Remover slug si existe en los datos
+      delete subcategoryData.slug;
 
       const subcategory = await Subcategory.create(subcategoryData);
       return subcategory;
@@ -203,16 +183,8 @@ class CategoryService {
         throw new Error('Subcategoría no encontrada');
       }
 
-      // Validar slug único si se está cambiando
-      if (subcategoryData.slug && subcategoryData.slug !== subcategory.slug) {
-        const existingSubcategory = await Subcategory.findOne({
-          where: { slug: subcategoryData.slug }
-        });
-
-        if (existingSubcategory) {
-          throw new Error('El slug ya existe');
-        }
-      }
+      // Remover slug si existe en los datos
+      delete subcategoryData.slug;
 
       await subcategory.update(subcategoryData);
       return subcategory;

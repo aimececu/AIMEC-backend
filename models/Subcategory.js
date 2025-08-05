@@ -26,14 +26,14 @@ const Subcategory = sequelize.define('Subcategory', {
       key: 'id'
     }
   },
-  slug: {
-    type: DataTypes.STRING(100),
-    allowNull: false,
-    unique: true,
-    validate: {
-      notEmpty: true
-    }
-  },
+  // slug: {
+  //   type: DataTypes.STRING(100),
+  //   allowNull: false,
+  //   unique: true,
+  //   validate: {
+  //     notEmpty: true
+  //   }
+  // },
   image: {
     type: DataTypes.STRING(500),
     allowNull: true
@@ -67,9 +67,6 @@ const Subcategory = sequelize.define('Subcategory', {
   indexes: [
     {
       fields: ['category_id']
-    },
-    {
-      fields: ['slug']
     },
     {
       fields: ['is_active']

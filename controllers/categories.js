@@ -45,10 +45,10 @@ const createCategory = async (req, res, next) => {
     const categoryData = req.body;
     
     // Validaciones básicas
-    if (!categoryData.name || !categoryData.slug) {
+    if (!categoryData.name) {
       return res.status(400).json({
         success: false,
-        error: "Nombre y slug son requeridos"
+        error: "Nombre es requerido"
       });
     }
 
@@ -123,10 +123,10 @@ const createSubcategory = async (req, res, next) => {
     const subcategoryData = req.body;
     
     // Validaciones básicas
-    if (!subcategoryData.name || !subcategoryData.slug || !subcategoryData.category_id) {
+    if (!subcategoryData.name || !subcategoryData.category_id) {
       return res.status(400).json({
         success: false,
-        error: "Nombre, slug y categoría padre son requeridos"
+        error: "Nombre y categoría padre son requeridos"
       });
     }
 

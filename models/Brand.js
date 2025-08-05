@@ -18,8 +18,8 @@ const Brand = sequelize.define('Brand', {
     type: DataTypes.TEXT,
     allowNull: true
   },
-  logo: {
-    type: DataTypes.STRING(500),
+  logo_url: {
+    type: DataTypes.STRING(255),
     allowNull: true
   },
   website: {

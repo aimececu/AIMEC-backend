@@ -100,6 +100,19 @@ cd AIMEC-backend
 npm install
 ```
 
+### 3. Configurar la base de datos
+El proyecto usa Sequelize ORM con sincronización automática. Para configurar la base de datos:
+
+```bash
+# Sincronizar y crear tablas (con datos de ejemplo)
+npm run sync-db
+
+# O si solo quieres sincronizar sin recrear tablas
+node -e "const { syncDatabase } = require('./config/database'); syncDatabase(false)"
+```
+
+**⚠️ Importante:** El comando `npm run sync-db` eliminará todas las tablas existentes y las recreará desde cero con datos de ejemplo.
+
 ### 3. Configurar base de datos
 ```sql
 -- Conectar a PostgreSQL
@@ -190,12 +203,19 @@ npm run deploy
 ### Scripts Disponibles
 
 ```bash
-npm run dev              # Desarrollo con Express
-npm run dev:serverless   # Desarrollo con Serverless
-npm run start            # Producción
-npm run init:admin       # Inicializar usuario admin
-npm run deploy           # Desplegar a AWS
-npm run deploy:prod      # Desplegar a producción
+# Desarrollo
+npm run dev              # Servidor de desarrollo con nodemon
+npm run dev:serverless   # Servidor serverless offline
+
+# Producción
+npm start               # Servidor de producción
+npm run deploy          # Desplegar a AWS Lambda (dev)
+npm run deploy:prod     # Desplegar a AWS Lambda (prod)
+npm run remove          # Remover despliegue de AWS Lambda
+npm run logs            # Ver logs de AWS Lambda
+
+# Base de datos
+npm run sync-db         # Sincronizar base de datos (recrear tablas + datos de ejemplo)
 ```
 
 ## 🌐 API Endpoints

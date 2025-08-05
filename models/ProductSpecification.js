@@ -23,9 +23,21 @@ const ProductSpecification = sequelize.define('ProductSpecification', {
       key: 'id'
     }
   },
-  value: {
+  value_text: {
     type: DataTypes.TEXT,
-    allowNull: false
+    allowNull: true
+  },
+  value_number: {
+    type: DataTypes.DECIMAL(15, 5),
+    allowNull: true
+  },
+  value_boolean: {
+    type: DataTypes.BOOLEAN,
+    allowNull: true
+  },
+  value_json: {
+    type: DataTypes.JSONB,
+    allowNull: true
   },
   created_at: {
     type: DataTypes.DATE,

@@ -10,17 +10,17 @@ class ProductService {
         {
           model: Brand,
           as: 'brand',
-          attributes: ['id', 'name', 'logo']
+          attributes: ['id', 'name', 'logo_url']
         },
         {
           model: Category,
           as: 'category',
-          attributes: ['id', 'name', 'slug']
+          attributes: ['id', 'name']
         },
         {
           model: Subcategory,
           as: 'subcategory',
-          attributes: ['id', 'name', 'slug']
+          attributes: ['id', 'name']
         },
         {
           model: ProductSeries,
@@ -93,17 +93,17 @@ class ProductService {
           {
             model: Brand,
             as: 'brand',
-            attributes: ['id', 'name', 'logo', 'website']
+            attributes: ['id', 'name', 'logo_url', 'website']
           },
           {
             model: Category,
             as: 'category',
-            attributes: ['id', 'name', 'slug']
+            attributes: ['id', 'name']
           },
           {
             model: Subcategory,
             as: 'subcategory',
-            attributes: ['id', 'name', 'slug']
+            attributes: ['id', 'name']
           },
           {
             model: ProductSeries,
@@ -130,51 +130,51 @@ class ProductService {
     }
   }
 
-  // Obtener producto por slug
-  async getProductBySlug(slug) {
-    try {
-      const product = await Product.findOne({
-        where: { slug, is_active: true },
-        include: [
-          {
-            model: Brand,
-            as: 'brand',
-            attributes: ['id', 'name', 'logo', 'website']
-          },
-          {
-            model: Category,
-            as: 'category',
-            attributes: ['id', 'name', 'slug']
-          },
-          {
-            model: Subcategory,
-            as: 'subcategory',
-            attributes: ['id', 'name', 'slug']
-          },
-          {
-            model: ProductSeries,
-            as: 'series',
-            attributes: ['id', 'name']
-          },
-          {
-            model: ProductSpecification,
-            as: 'specifications',
-            include: [
-              {
-                model: SpecificationType,
-                as: 'specificationType',
-                attributes: ['id', 'name', 'unit', 'data_type']
-              }
-            ]
-          }
-        ]
-      });
+  // Obtener producto por slug (deshabilitado - no hay columna slug)
+  // async getProductBySlug(slug) {
+  //   try {
+  //     const product = await Product.findOne({
+  //       where: { slug, is_active: true },
+  //       include: [
+  //         {
+  //           model: Brand,
+  //           as: 'brand',
+  //           attributes: ['id', 'name', 'logo', 'website']
+  //         },
+  //         {
+  //           model: Category,
+  //           as: 'category',
+  //           attributes: ['id', 'name']
+  //         },
+  //         {
+  //           model: Subcategory,
+  //           as: 'subcategory',
+  //           attributes: ['id', 'name']
+  //         },
+  //         {
+  //           model: ProductSeries,
+  //           as: 'series',
+  //           attributes: ['id', 'name']
+  //         },
+  //         {
+  //           model: ProductSpecification,
+  //           as: 'specifications',
+  //           include: [
+  //             {
+  //               model: SpecificationType,
+  //               as: 'specificationType',
+  //               attributes: ['id', 'name', 'unit', 'data_type']
+  //             }
+  //           ]
+  //         }
+  //       ]
+  //     });
 
-      return product;
-    } catch (error) {
-      throw new Error(`Error al obtener producto por slug: ${error.message}`);
-    }
-  }
+  //     return product;
+  //   } catch (error) {
+  //     throw new Error(`Error al obtener producto por slug: ${error.message}`);
+  //   }
+  // }
 
   // Crear nuevo producto
   async createProduct(productData) {
@@ -188,14 +188,8 @@ class ProductService {
         throw new Error('El SKU ya existe');
       }
 
-      // Validar slug único
-      const existingSlug = await Product.findOne({
-        where: { slug: productData.slug }
-      });
-
-      if (existingSlug) {
-        throw new Error('El slug ya existe');
-      }
+      // Remover slug si existe en los datos
+      delete productData.slug;
 
       const product = await Product.create(productData);
       return product;
@@ -223,16 +217,8 @@ class ProductService {
         }
       }
 
-      // Validar slug único si se está cambiando
-      if (productData.slug && productData.slug !== product.slug) {
-        const existingSlug = await Product.findOne({
-          where: { slug: productData.slug }
-        });
-
-        if (existingSlug) {
-          throw new Error('El slug ya existe');
-        }
-      }
+      // Remover slug si existe en los datos
+      delete productData.slug;
 
       await product.update(productData);
       return product;
@@ -272,12 +258,12 @@ class ProductService {
         {
           model: Brand,
           as: 'brand',
-          attributes: ['id', 'name', 'logo']
+          attributes: ['id', 'name', 'logo_url']
         },
         {
           model: Category,
           as: 'category',
-          attributes: ['id', 'name', 'slug']
+          attributes: ['id', 'name']
         }
       ];
 
@@ -332,12 +318,12 @@ class ProductService {
           {
             model: Brand,
             as: 'brand',
-            attributes: ['id', 'name', 'logo']
+            attributes: ['id', 'name', 'logo_url']
           },
           {
             model: Category,
             as: 'category',
-            attributes: ['id', 'name', 'slug']
+            attributes: ['id', 'name']
           }
         ],
         limit,
@@ -359,12 +345,12 @@ class ProductService {
           {
             model: Brand,
             as: 'brand',
-            attributes: ['id', 'name', 'logo']
+            attributes: ['id', 'name', 'logo_url']
           },
           {
             model: Category,
             as: 'category',
-            attributes: ['id', 'name', 'slug']
+            attributes: ['id', 'name']
           }
         ],
         limit,
@@ -386,12 +372,12 @@ class ProductService {
           {
             model: Brand,
             as: 'brand',
-            attributes: ['id', 'name', 'logo']
+            attributes: ['id', 'name', 'logo_url']
           },
           {
             model: Category,
             as: 'category',
-            attributes: ['id', 'name', 'slug']
+            attributes: ['id', 'name']
           }
         ],
         order: [['created_at', 'DESC']]

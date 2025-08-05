@@ -32,12 +32,7 @@ const setupSwaggerUI = (app) => {
       filter: true,
       showExtensions: true,
       showCommonExtensions: true,
-      tryItOutEnabled: true,
-      requestInterceptor: (request) => {
-        // Agregar headers CORS a las peticiones
-        request.headers['Access-Control-Allow-Origin'] = '*';
-        return request;
-      }
+      tryItOutEnabled: true
     }
   }));
 

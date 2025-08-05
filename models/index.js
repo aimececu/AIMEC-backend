@@ -21,6 +21,10 @@ const ProductCertification = require('./ProductCertification');
 // DEFINICIÓN DE ASOCIACIONES
 // =====================================================
 
+// Asociaciones de ProductSeries
+ProductSeries.belongsTo(Brand, { foreignKey: 'brand_id', as: 'brand' });
+Brand.hasMany(ProductSeries, { foreignKey: 'brand_id', as: 'series' });
+
 // Asociaciones de Product
 Product.belongsTo(Brand, { foreignKey: 'brand_id', as: 'brand' });
 Product.belongsTo(Category, { foreignKey: 'category_id', as: 'category' });
@@ -36,6 +40,10 @@ ProductSeries.hasMany(Product, { foreignKey: 'series_id', as: 'products' });
 // Asociaciones de Subcategory
 Subcategory.belongsTo(Category, { foreignKey: 'category_id', as: 'category' });
 Category.hasMany(Subcategory, { foreignKey: 'category_id', as: 'subcategories' });
+
+// Asociaciones de SpecificationType
+SpecificationType.belongsTo(Category, { foreignKey: 'category_id', as: 'category' });
+Category.hasMany(SpecificationType, { foreignKey: 'category_id', as: 'specificationTypes' });
 
 // Asociaciones de ProductSpecification
 ProductSpecification.belongsTo(Product, { foreignKey: 'product_id', as: 'product' });

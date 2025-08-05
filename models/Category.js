@@ -18,14 +18,14 @@ const Category = sequelize.define('Category', {
     type: DataTypes.TEXT,
     allowNull: true
   },
-  slug: {
-    type: DataTypes.STRING(100),
-    allowNull: false,
-    unique: true,
-    validate: {
-      notEmpty: true
-    }
-  },
+  // slug: {
+  //   type: DataTypes.STRING(100),
+  //   allowNull: false,
+  //   unique: true,
+  //   validate: {
+  //     notEmpty: true
+  //   }
+  // },
   image: {
     type: DataTypes.STRING(500),
     allowNull: true
@@ -80,9 +80,6 @@ const Category = sequelize.define('Category', {
   createdAt: 'created_at',
   updatedAt: 'updated_at',
   indexes: [
-    {
-      fields: ['slug']
-    },
     {
       fields: ['is_active']
     },

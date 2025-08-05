@@ -18,9 +18,12 @@ const getLocalIP = () => {
   return '0.0.0.0'; // Fallback si no se encuentra IP
 };
 
-const HOST = getLocalIP();
+const HOST = '0.0.0.0'; // Escuchar en todas las interfaces
 
 app.listen(PORT, HOST, () => {
   logger.serverStart(PORT, HOST);
   logger.info('⏹️  Presiona Ctrl+C para detener el servidor');
+  logger.info(`🌐 Servidor disponible en:`);
+  logger.info(`   - Local: http://localhost:${PORT}`);
+  logger.info(`   - Network: http://${getLocalIP()}:${PORT}`);
 }); 

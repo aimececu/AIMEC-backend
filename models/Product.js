@@ -37,7 +37,7 @@ const Product = sequelize.define('Product', {
       min: 0
     }
   },
-  sale_price: {
+  original_price: {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: true,
     validate: {
@@ -62,7 +62,21 @@ const Product = sequelize.define('Product', {
   min_stock_level: {
     type: DataTypes.INTEGER,
     allowNull: true,
-    defaultValue: 0,
+    defaultValue: 5,
+    validate: {
+      min: 0
+    }
+  },
+  warranty_months: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    validate: {
+      min: 0
+    }
+  },
+  lead_time_days: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
     validate: {
       min: 0
     }
@@ -75,7 +89,7 @@ const Product = sequelize.define('Product', {
     }
   },
   dimensions: {
-    type: DataTypes.JSONB,
+    type: DataTypes.STRING(100),
     allowNull: true
   },
   brand_id: {
@@ -110,18 +124,17 @@ const Product = sequelize.define('Product', {
       key: 'id'
     }
   },
-  slug: {
-    type: DataTypes.STRING(255),
-    allowNull: false,
-    unique: true,
-    validate: {
-      notEmpty: true
-    }
-  },
-  images: {
+  // slug: {
+  //   type: DataTypes.STRING(255),
+  //   allowNull: false,
+  //   unique: true,
+  //   validate: {
+  //     notEmpty: true
+  //   }
+  // },
+  additional_images: {
     type: DataTypes.JSONB,
-    allowNull: true,
-    defaultValue: []
+    allowNull: true
   },
   main_image: {
     type: DataTypes.STRING(500),
@@ -137,25 +150,25 @@ const Product = sequelize.define('Product', {
     allowNull: false,
     defaultValue: true
   },
-  is_digital: {
-    type: DataTypes.BOOLEAN,
-    allowNull: false,
-    defaultValue: false
-  },
-  requires_shipping: {
-    type: DataTypes.BOOLEAN,
-    allowNull: false,
-    defaultValue: true
-  },
-  tax_rate: {
-    type: DataTypes.DECIMAL(5, 2),
-    allowNull: true,
-    defaultValue: 0,
-    validate: {
-      min: 0,
-      max: 100
-    }
-  },
+  // is_digital: {
+  //   type: DataTypes.BOOLEAN,
+  //   allowNull: false,
+  //   defaultValue: false
+  // },
+  // requires_shipping: {
+  //   type: DataTypes.BOOLEAN,
+  //   allowNull: false,
+  //   defaultValue: true
+  // },
+  // tax_rate: {
+  //   type: DataTypes.DECIMAL(5, 2),
+  //   allowNull: true,
+  //   defaultValue: 0,
+  //   validate: {
+  //     min: 0,
+  //     max: 100
+  //   }
+  // },
   meta_title: {
     type: DataTypes.STRING(255),
     allowNull: true
@@ -168,23 +181,23 @@ const Product = sequelize.define('Product', {
     type: DataTypes.TEXT,
     allowNull: true
   },
-  tags: {
-    type: DataTypes.JSONB,
-    allowNull: true,
-    defaultValue: []
-  },
-  warranty_info: {
-    type: DataTypes.TEXT,
-    allowNull: true
-  },
-  installation_guide: {
-    type: DataTypes.TEXT,
-    allowNull: true
-  },
-  technical_specs: {
-    type: DataTypes.JSONB,
-    allowNull: true
-  },
+  // tags: {
+  //   type: DataTypes.JSONB,
+  //   allowNull: true,
+  //   defaultValue: []
+  // },
+  // warranty_info: {
+  //   type: DataTypes.TEXT,
+  //   allowNull: true
+  // },
+  // installation_guide: {
+  //   type: DataTypes.TEXT,
+  //   allowNull: true
+  // },
+  // technical_specs: {
+  //   type: DataTypes.JSONB,
+  //   allowNull: true
+  // },
   created_at: {
     type: DataTypes.DATE,
     allowNull: false,
@@ -205,9 +218,9 @@ const Product = sequelize.define('Product', {
     {
       fields: ['sku']
     },
-    {
-      fields: ['slug']
-    },
+    // {
+    //   fields: ['slug']
+    // },
     {
       fields: ['brand_id']
     },

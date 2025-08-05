@@ -8,6 +8,7 @@
     "dev": "nodemon server.js",
     "dev:serverless": "serverless offline",
     "start": "node server.js",
+    "sync-db": "node scripts/sync-database.js",
     "deploy": "serverless deploy",
     "deploy:prod": "serverless deploy --stage production",
     "remove": "serverless remove",

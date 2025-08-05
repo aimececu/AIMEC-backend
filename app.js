@@ -21,6 +21,8 @@ const app = express();
 
 setupMiddlewares(app);
 
+// Removido middleware CORS adicional que causaba conflictos
+
 // =====================================================
 // MIDDLEWARE DE BASE DE DATOS
 // =====================================================
@@ -138,6 +140,17 @@ app.get("/", (req, res) => {
       specifications: "/api/specifications",
       auth: "/api/auth"
     }
+  });
+});
+
+// Endpoint de prueba CORS
+app.get("/test-cors", (req, res) => {
+  res.json({
+    success: true,
+    message: "CORS test successful",
+    timestamp: new Date().toISOString(),
+    origin: req.headers.origin,
+    method: req.method
   });
 });
 

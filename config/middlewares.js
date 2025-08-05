@@ -10,7 +10,8 @@ const setupMiddlewares = (app) => {
   // Middleware de seguridad
   app.use(helmet({
     contentSecurityPolicy: false, // Deshabilitar CSP para desarrollo
-    crossOriginEmbedderPolicy: false
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: false
   }));
 
   // Middleware CORS
