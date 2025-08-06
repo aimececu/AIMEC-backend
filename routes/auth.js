@@ -53,7 +53,7 @@ const authController = require('../controllers/auth');
 
 /**
  * @swagger
- * /auth/login:
+ * /api/auth/login:
  *   post:
  *     summary: Iniciar sesión
  *     description: Autenticar usuario y obtener sessionID
@@ -82,7 +82,7 @@ router.post('/login', authController.login);
 
 /**
  * @swagger
- * /auth/logout:
+ * /api/auth/logout:
  *   post:
  *     summary: Cerrar sesión
  *     description: Cerrar sesión del usuario actual
@@ -138,7 +138,47 @@ router.get('/verify', authController.verifySession, authController.verifyAuth);
 
 /**
  * @swagger
- * /auth/register:
+ * /api/auth/register-initial:
+ *   post:
+ *     summary: Registrar primer administrador
+ *     description: Crear el primer usuario administrador del sistema (solo funciona si no hay usuarios)
+ *     tags: [Autenticación]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *               - name
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: Email del administrador
+ *               password:
+ *                 type: string
+ *                 description: Contraseña del administrador
+ *               name:
+ *                 type: string
+ *                 description: Nombre del administrador
+ *     responses:
+ *       201:
+ *         description: Administrador creado exitosamente
+ *       400:
+ *         description: Datos inválidos
+ *       409:
+ *         description: Ya existe un usuario en el sistema
+ *       500:
+ *         description: Error del servidor
+ */
+router.post('/register-initial', authController.registerInitial);
+
+/**
+ * @swagger
+ * /api/auth/register:
  *   post:
  *     summary: Registrar usuario
  *     description: Registrar un nuevo usuario (solo admin)
@@ -183,7 +223,7 @@ router.post('/register', authController.verifySession, authController.requireAdm
 
 /**
  * @swagger
- * /auth/profile:
+ * /api/auth/profile:
  *   get:
  *     summary: Obtener perfil
  *     description: Obtener información del perfil del usuario actual
@@ -200,7 +240,7 @@ router.get('/profile', authController.verifySession, authController.getProfile);
 
 /**
  * @swagger
- * /auth/profile:
+ * /api/auth/profile:
  *   put:
  *     summary: Actualizar perfil
  *     description: Actualizar información del perfil del usuario actual

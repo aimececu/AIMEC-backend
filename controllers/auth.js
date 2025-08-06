@@ -512,6 +512,127 @@ const register = async (req, res) => {
   }
 };
 
+/**
+ * @swagger
+ * /auth/register-initial:
+ *   post:
+ *     summary: Registrar primer administrador
+ *     description: Crear el primer usuario administrador del sistema (solo funciona si no hay usuarios)
+ *     tags: [Autenticación]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *               - name
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: Email del administrador
+ *               password:
+ *                 type: string
+ *                 description: Contraseña del administrador
+ *               name:
+ *                 type: string
+ *                 description: Nombre del administrador
+ *     responses:
+ *       201:
+ *         description: Administrador creado exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                     email:
+ *                       type: string
+ *                     name:
+ *                       type: string
+ *                     role:
+ *                       type: string
+ *       400:
+ *         description: Datos inválidos o ya existe un usuario
+ *       409:
+ *         description: Ya existe un usuario en el sistema
+ *       500:
+ *         description: Error del servidor
+ */
+const registerInitial = async (req, res) => {
+  try {
+    const { email, password, name } = req.body;
+
+    // Validar campos requeridos
+    if (!email || !password || !name) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email, contraseña y nombre son requeridos'
+      });
+    }
+
+    // Verificar si ya existe algún usuario en el sistema
+    const userCount = await User.count();
+    if (userCount > 0) {
+      return res.status(409).json({
+        success: false,
+        error: 'Ya existe un usuario en el sistema. Use /api/auth/register con autenticación de administrador.'
+      });
+    }
+
+    // Verificar si el email ya existe
+    const existingUser = await User.findOne({
+      where: { email: email.toLowerCase() }
+    });
+
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        error: 'El email ya está registrado'
+      });
+    }
+
+    // Crear el primer administrador
+    const newUser = await User.create({
+      email: email.toLowerCase(),
+      password,
+      name,
+      role: 'admin', // Forzar rol de administrador
+      is_active: true
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Primer administrador creado exitosamente',
+      data: {
+        id: newUser.id,
+        email: newUser.email,
+        name: newUser.name,
+        role: newUser.role,
+        is_active: newUser.is_active
+      }
+    });
+
+  } catch (error) {
+    console.error('Error en registro inicial:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error interno del servidor'
+    });
+  }
+};
+
 module.exports = {
   login,
   logout,
@@ -519,6 +640,7 @@ module.exports = {
   getProfile,
   updateProfile,
   register,
+  registerInitial,
   verifySession,
   requireAdmin
 }; 

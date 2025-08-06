@@ -75,6 +75,12 @@ const swaggerOptions = {
           type: "http",
           scheme: "bearer",
           bearerFormat: "JWT"
+        },
+        sessionAuth: {
+          type: "apiKey",
+          in: "header",
+          name: "sessionid",
+          description: "Session ID para autenticación"
         }
       }
     },
@@ -82,6 +88,10 @@ const swaggerOptions = {
       {
         name: "Sistema",
         description: "Endpoints del sistema"
+      },
+      {
+        name: "Autenticación",
+        description: "Gestión de autenticación y usuarios"
       },
       {
         name: "Productos",
