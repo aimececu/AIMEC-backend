@@ -10,6 +10,7 @@ API REST para el sistema de gestión de productos industriales AIMEC.
 - **API RESTful**: Endpoints bien documentados con Swagger
 - **Autenticación JWT**: Sistema de autenticación seguro
 - **Base de Datos PostgreSQL**: Con Sequelize ORM
+- **Despliegue Multi-Cloud**: Configurado para Railway, Render, Vercel y AWS
 
 ## 📋 Requisitos
 
@@ -46,7 +47,7 @@ createdb aimec_db
 
 ## 🚀 Uso
 
-### Desarrollo
+### Desarrollo Local
 ```bash
 npm run dev
 ```
@@ -62,20 +63,40 @@ El servidor se iniciará en `http://localhost:3750` y:
 npm start
 ```
 
-## 🔄 Sistema de Sincronización
+## 🌐 Arquitectura de Despliegue
 
-### Automático (Recomendado)
-- **Al ejecutar `npm run dev`**: El servidor detecta automáticamente cambios en los modelos
-- **Sincronización inteligente**: Solo modifica lo necesario, preserva datos existentes
-- **Sin scripts adicionales**: Todo funciona automáticamente
+### Servicios Utilizados
+- **Base de Datos**: PostgreSQL en Railway
+- **Backend API**: Node.js en Render.com
+- **Frontend**: React en Vercel
+- **Dominio**: AWS Route 53
+- **Almacenamiento**: [Por definir - opciones recomendadas abajo]
 
-### Manual (Solo en casos especiales)
-```bash
-# Forzar sincronización completa (BORRA TODOS LOS DATOS)
-npm run force-sync
+### Variables de Entorno por Entorno
+
+#### Desarrollo Local (.env)
+```env
+NODE_ENV=development
+PORT=3750
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=aimec_db
+DB_USER=tu_usuario
+DB_PASSWORD=tu_password
+DB_SCHEMA=public
 ```
 
-⚠️ **ADVERTENCIA**: `force-sync` elimina todos los datos de la base de datos.
+#### Producción (Render.com)
+```env
+NODE_ENV=production
+PORT=10000
+DB_HOST=tu-railway-host.railway.app
+DB_PORT=5432
+DB_NAME=railway
+DB_USER=postgres
+DB_PASSWORD=tu-railway-password
+DB_SCHEMA=public
+```
 
 ## 📁 Estructura del Proyecto
 
@@ -93,21 +114,35 @@ AIMEC-backend/
 
 ## 🔧 Configuración de Base de Datos
 
+### Railway (Producción)
+1. Crear proyecto en Railway
+2. Agregar servicio PostgreSQL
+3. Copiar variables de entorno desde Railway Dashboard
+4. Configurar en Render.com
+
 ### Variables de Entorno (.env)
 ```env
+# Base de Datos
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=aimec_db
 DB_USER=tu_usuario
 DB_PASSWORD=tu_password
 DB_SCHEMA=public
+
+# Entorno
 NODE_ENV=development
+PORT=3750
+
+# AWS (para dominio)
+AWS_REGION=us-east-1
 ```
 
 ## 📚 API Endpoints
 
 ### Documentación
-- **Swagger UI**: `http://localhost:3750/api-docs`
+- **Swagger UI**: `http://localhost:3750/api-docs` (desarrollo)
+- **Swagger UI**: `https://tu-app.onrender.com/api-docs` (producción)
 - **Health Check**: `GET /health`
 
 ### Principales
@@ -116,11 +151,65 @@ NODE_ENV=development
 - **Autenticación**: `POST /api/auth/login`
 - **Especificaciones**: `GET/POST/PUT/DELETE /api/specifications`
 
+## 🖼️ Almacenamiento de Imágenes
+
+### Opciones Recomendadas
+
+#### 1. AWS S3 (Recomendado)
+- **Ventajas**: Escalable, confiable, integración con AWS
+- **Configuración**: Bucket S3 + CloudFront para CDN
+- **Costo**: ~$0.023/GB/mes
+
+#### 2. Cloudinary
+- **Ventajas**: Optimización automática, transformaciones
+- **Configuración**: Cuenta gratuita hasta 25GB
+- **Costo**: Gratis para uso básico
+
+#### 3. Railway Storage
+- **Ventajas**: Mismo proveedor que la base de datos
+- **Configuración**: Integrado con Railway
+- **Costo**: Incluido en el plan
+
+#### 4. Vercel Blob Storage
+- **Ventajas**: Integración nativa con Vercel
+- **Configuración**: Fácil setup
+- **Costo**: $0.20/GB/mes
+
+### Implementación Sugerida
+```javascript
+// Ejemplo con AWS S3
+const AWS = require('aws-sdk');
+const s3 = new AWS.S3({
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  region: process.env.AWS_REGION
+});
+```
+
+## 🔄 Sistema de Sincronización
+
+### Automático (Recomendado)
+- **Al ejecutar `npm run dev`**: El servidor detecta automáticamente cambios en los modelos
+- **Sincronización inteligente**: Solo modifica lo necesario, preserva datos existentes
+- **Sin scripts adicionales**: Todo funciona automáticamente
+
+### Manual (Solo en casos especiales)
+```bash
+# Forzar sincronización completa (BORRA TODOS LOS DATOS)
+npm run force-sync
+```
+
+⚠️ **ADVERTENCIA**: `force-sync` elimina todos los datos de la base de datos.
+
 ## 🔍 Monitoreo
 
 ### Health Check
 ```bash
+# Desarrollo
 curl http://localhost:3750/health
+
+# Producción
+curl https://tu-app.onrender.com/health
 ```
 
 ### Logs
@@ -136,6 +225,7 @@ Los logs se muestran en consola durante desarrollo y incluyen:
 1. Verificar que PostgreSQL esté ejecutándose
 2. Revisar credenciales en `.env`
 3. Verificar que la base de datos existe
+4. **Railway**: Verificar variables de entorno en Railway Dashboard
 
 ### Error de Sincronización
 1. Verificar permisos de la base de datos
@@ -182,15 +272,29 @@ npm run force-sync
 
 ## 🚀 Despliegue
 
-### Local
-```bash
-npm start
-```
+### Render.com (Backend)
+1. Conectar repositorio en Render
+2. Configurar variables de entorno
+3. Build Command: `npm install`
+4. Start Command: `npm start`
+5. Puerto: `10000`
 
-### Serverless (AWS Lambda)
-```bash
-npm run deploy
-```
+### Vercel (Frontend)
+1. Conectar repositorio en Vercel
+2. Configurar variables de entorno
+3. Build Command: `npm run build`
+4. Output Directory: `dist`
+
+### AWS Route 53 (Dominio)
+1. Registrar dominio en AWS
+2. Configurar DNS en Route 53
+3. Apuntar a Render (backend) y Vercel (frontend)
+
+### Railway (Base de Datos)
+1. Crear proyecto en Railway
+2. Agregar servicio PostgreSQL
+3. Copiar variables de entorno
+4. Configurar en Render.com
 
 ## 📄 Licencia
 
