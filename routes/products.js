@@ -2,6 +2,28 @@ const express = require('express');
 const router = express.Router();
 const productController = require('../controllers/products');
 const { verifySession, requireAdmin } = require('../controllers/auth');
+const { authenticateToken } = require('../config/jwt');
+const { validateInput } = require('../config/validation');
+const { uploadLimiter } = require('../config/rateLimit');
+
+// Esquemas de validación
+const productSchema = {
+  name: { type: 'text', required: true, minLength: 2, maxLength: 200 },
+  description: { type: 'text', required: false, maxLength: 1000 },
+  sku: { type: 'text', required: true, minLength: 3, maxLength: 50 },
+  price: { type: 'number', required: true, min: 0 },
+  category_id: { type: 'number', required: true, min: 1 },
+  brand_id: { type: 'number', required: false, min: 1 }
+};
+
+const productUpdateSchema = {
+  name: { type: 'text', required: false, minLength: 2, maxLength: 200 },
+  description: { type: 'text', required: false, maxLength: 1000 },
+  sku: { type: 'text', required: false, minLength: 3, maxLength: 50 },
+  price: { type: 'number', required: false, min: 0 },
+  category_id: { type: 'number', required: false, min: 1 },
+  brand_id: { type: 'number', required: false, min: 1 }
+};
 
 // =====================================================
 // RUTAS DE PRODUCTOS
@@ -431,5 +453,460 @@ router.put('/:id', verifySession, requireAdmin, productController.updateProduct)
 
 // Eliminar producto
 router.delete('/:id', verifySession, requireAdmin, productController.deleteProduct);
+
+// =====================================================
+// RUTAS DE APLICACIONES DE PRODUCTOS
+// =====================================================
+
+/**
+ * @swagger
+ * /api/products/{productId}/applications:
+ *   get:
+ *     summary: Obtener aplicaciones de un producto
+ *     description: Retorna todas las aplicaciones asociadas a un producto específico
+ *     tags: [Productos]
+ *     parameters:
+ *       - in: path
+ *         name: productId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID del producto
+ *     responses:
+ *       200:
+ *         description: Lista de aplicaciones del producto
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Application'
+ *       404:
+ *         description: Producto no encontrado
+ */
+router.get('/:productId/applications', productController.getProductApplications);
+
+/**
+ * @swagger
+ * /api/products/{productId}/applications:
+ *   post:
+ *     summary: Asignar aplicaciones a un producto
+ *     description: Asigna una o más aplicaciones a un producto específico
+ *     tags: [Productos]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: productId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID del producto
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - application_ids
+ *             properties:
+ *               application_ids:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *                 description: Array de IDs de aplicaciones a asignar
+ *     responses:
+ *       200:
+ *         description: Aplicaciones asignadas exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/ProductApplication'
+ *       400:
+ *         description: Datos inválidos
+ *       404:
+ *         description: Producto no encontrado
+ */
+router.post('/:productId/applications', verifySession, requireAdmin, productController.assignApplicationsToProduct);
+
+// =====================================================
+// RUTAS DE CARACTERÍSTICAS DE PRODUCTOS
+// =====================================================
+
+/**
+ * @swagger
+ * /api/products/{productId}/features:
+ *   get:
+ *     summary: Obtener características de un producto
+ *     description: Retorna todas las características asociadas a un producto específico
+ *     tags: [Productos]
+ *     parameters:
+ *       - in: path
+ *         name: productId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID del producto
+ *     responses:
+ *       200:
+ *         description: Lista de características del producto
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/ProductFeature'
+ *       404:
+ *         description: Producto no encontrado
+ */
+router.get('/:productId/features', productController.getProductFeatures);
+
+/**
+ * @swagger
+ * /api/products/{productId}/features:
+ *   post:
+ *     summary: Agregar característica a un producto
+ *     description: Agrega una nueva característica a un producto específico
+ *     tags: [Productos]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: productId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID del producto
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - feature_id
+ *             properties:
+ *               feature_id:
+ *                 type: integer
+ *                 description: ID de la característica
+ *               value:
+ *                 type: string
+ *                 description: Valor de la característica
+ *               unit:
+ *                 type: string
+ *                 description: Unidad de medida (opcional)
+ *     responses:
+ *       201:
+ *         description: Característica agregada exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   $ref: '#/components/schemas/ProductFeature'
+ *       400:
+ *         description: Datos inválidos
+ *       404:
+ *         description: Producto no encontrado
+ */
+router.post('/:productId/features', verifySession, requireAdmin, productController.addProductFeature);
+
+/**
+ * @swagger
+ * /api/products/{productId}/features/{featureId}:
+ *   put:
+ *     summary: Actualizar característica de un producto
+ *     description: Actualiza una característica específica de un producto
+ *     tags: [Productos]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: productId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID del producto
+ *       - in: path
+ *         name: featureId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID de la característica
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               value:
+ *                 type: string
+ *                 description: Nuevo valor de la característica
+ *               unit:
+ *                 type: string
+ *                 description: Nueva unidad de medida
+ *     responses:
+ *       200:
+ *         description: Característica actualizada exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   $ref: '#/components/schemas/ProductFeature'
+ *       400:
+ *         description: Datos inválidos
+ *       404:
+ *         description: Producto o característica no encontrado
+ */
+router.put('/:productId/features/:featureId', verifySession, requireAdmin, productController.updateProductFeature);
+
+/**
+ * @swagger
+ * /api/products/{productId}/features/{featureId}:
+ *   delete:
+ *     summary: Eliminar característica de un producto
+ *     description: Elimina una característica específica de un producto
+ *     tags: [Productos]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: productId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID del producto
+ *       - in: path
+ *         name: featureId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID de la característica
+ *     responses:
+ *       200:
+ *         description: Característica eliminada exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *       404:
+ *         description: Producto o característica no encontrado
+ */
+router.delete('/:productId/features/:featureId', verifySession, requireAdmin, productController.deleteProductFeature);
+
+// =====================================================
+// RUTAS DE PRODUCTOS RELACIONADOS
+// =====================================================
+
+/**
+ * @swagger
+ * /api/products/{productId}/related:
+ *   get:
+ *     summary: Obtener productos relacionados
+ *     description: Retorna todos los productos relacionados a un producto específico
+ *     tags: [Productos]
+ *     parameters:
+ *       - in: path
+ *         name: productId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID del producto
+ *     responses:
+ *       200:
+ *         description: Lista de productos relacionados
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Product'
+ *       404:
+ *         description: Producto no encontrado
+ */
+router.get('/:productId/related', productController.getProductRelated);
+
+/**
+ * @swagger
+ * /api/products/{productId}/related:
+ *   post:
+ *     summary: Agregar producto relacionado
+ *     description: Agrega un producto relacionado a un producto específico
+ *     tags: [Productos]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: productId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID del producto
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - related_product_id
+ *             properties:
+ *               related_product_id:
+ *                 type: integer
+ *                 description: ID del producto relacionado
+ *     responses:
+ *       201:
+ *         description: Producto relacionado agregado exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   $ref: '#/components/schemas/ProductRelated'
+ *       400:
+ *         description: Datos inválidos
+ *       404:
+ *         description: Producto no encontrado
+ */
+router.post('/:productId/related', verifySession, requireAdmin, productController.addProductRelated);
+
+/**
+ * @swagger
+ * /api/products/{productId}/related/{relatedId}:
+ *   put:
+ *     summary: Actualizar producto relacionado
+ *     description: Actualiza un producto relacionado específico
+ *     tags: [Productos]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: productId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID del producto
+ *       - in: path
+ *         name: relatedId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID del producto relacionado
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               related_product_id:
+ *                 type: integer
+ *                 description: Nuevo ID del producto relacionado
+ *     responses:
+ *       200:
+ *         description: Producto relacionado actualizado exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   $ref: '#/components/schemas/ProductRelated'
+ *       400:
+ *         description: Datos inválidos
+ *       404:
+ *         description: Producto o relación no encontrado
+ */
+router.put('/:productId/related/:relatedId', verifySession, requireAdmin, productController.updateProductRelated);
+
+/**
+ * @swagger
+ * /api/products/{productId}/related/{relatedId}:
+ *   delete:
+ *     summary: Eliminar producto relacionado
+ *     description: Elimina un producto relacionado específico
+ *     tags: [Productos]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: productId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID del producto
+ *       - in: path
+ *         name: relatedId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID del producto relacionado
+ *     responses:
+ *       200:
+ *         description: Producto relacionado eliminado exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *       404:
+ *         description: Producto o relación no encontrado
+ */
+router.delete('/:productId/related/:relatedId', verifySession, requireAdmin, productController.deleteProductRelated);
 
 module.exports = router; 

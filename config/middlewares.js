@@ -3,6 +3,7 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const path = require('path');
 const corsMiddleware = require('./cors');
+const { generalLimiter } = require('./rateLimit');
 const logger = require('./logger');
 
 // Configuración de middlewares
@@ -16,6 +17,9 @@ const setupMiddlewares = (app) => {
 
   // Middleware CORS
   app.use(corsMiddleware);
+
+  // Rate Limiting global
+  app.use(generalLimiter);
 
   // Middleware de logging
   app.use(morgan('combined'));

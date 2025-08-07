@@ -499,6 +499,252 @@ class ProductService {
       throw new Error(`Error al obtener estadísticas: ${error.message}`);
     }
   }
+
+  // =====================================================
+  // MÉTODOS DE APLICACIONES DE PRODUCTOS
+  // =====================================================
+
+  // Obtener aplicaciones de un producto
+  async getProductApplications(productId) {
+    try {
+      const applications = await ProductApplication.findAll({
+        where: { product_id: productId },
+        include: [
+          {
+            model: Application,
+            as: 'application',
+            attributes: ['id', 'name', 'description']
+          }
+        ]
+      });
+
+      return applications;
+    } catch (error) {
+      throw new Error(`Error al obtener aplicaciones del producto: ${error.message}`);
+    }
+  }
+
+  // Asignar aplicaciones a un producto
+  async assignApplicationsToProduct(productId, applicationIds) {
+    try {
+      const product = await Product.findByPk(productId);
+      if (!product) {
+        throw new Error('Producto no encontrado');
+      }
+
+      // Eliminar asignaciones existentes
+      await ProductApplication.destroy({
+        where: { product_id: productId }
+      });
+
+      // Crear nuevas asignaciones
+      const assignments = applicationIds.map(appId => ({
+        product_id: productId,
+        application_id: appId
+      }));
+
+      const result = await ProductApplication.bulkCreate(assignments);
+      return result;
+    } catch (error) {
+      throw new Error(`Error al asignar aplicaciones: ${error.message}`);
+    }
+  }
+
+  // =====================================================
+  // MÉTODOS DE CARACTERÍSTICAS DE PRODUCTOS
+  // =====================================================
+
+  // Obtener características de un producto
+  async getProductFeatures(productId) {
+    try {
+      const features = await ProductFeature.findAll({
+        where: { product_id: productId },
+        include: [
+          {
+            model: Feature,
+            as: 'feature',
+            attributes: ['id', 'name', 'description', 'unit']
+          }
+        ]
+      });
+
+      return features;
+    } catch (error) {
+      throw new Error(`Error al obtener características del producto: ${error.message}`);
+    }
+  }
+
+  // Agregar característica a un producto
+  async addProductFeature(productId, featureData) {
+    try {
+      const product = await Product.findByPk(productId);
+      if (!product) {
+        throw new Error('Producto no encontrado');
+      }
+
+      const feature = await ProductFeature.create({
+        product_id: productId,
+        feature_id: featureData.feature_id,
+        value: featureData.value,
+        unit: featureData.unit
+      });
+
+      return feature;
+    } catch (error) {
+      throw new Error(`Error al agregar característica: ${error.message}`);
+    }
+  }
+
+  // Actualizar característica de un producto
+  async updateProductFeature(productId, featureId, featureData) {
+    try {
+      const feature = await ProductFeature.findOne({
+        where: { 
+          product_id: productId, 
+          id: featureId 
+        }
+      });
+
+      if (!feature) {
+        throw new Error('Característica no encontrada');
+      }
+
+      await feature.update({
+        value: featureData.value,
+        unit: featureData.unit
+      });
+
+      return feature;
+    } catch (error) {
+      throw new Error(`Error al actualizar característica: ${error.message}`);
+    }
+  }
+
+  // Eliminar característica de un producto
+  async deleteProductFeature(productId, featureId) {
+    try {
+      const feature = await ProductFeature.findOne({
+        where: { 
+          product_id: productId, 
+          id: featureId 
+        }
+      });
+
+      if (!feature) {
+        throw new Error('Característica no encontrada');
+      }
+
+      await feature.destroy();
+      return true;
+    } catch (error) {
+      throw new Error(`Error al eliminar característica: ${error.message}`);
+    }
+  }
+
+  // =====================================================
+  // MÉTODOS DE PRODUCTOS RELACIONADOS
+  // =====================================================
+
+  // Obtener productos relacionados
+  async getProductRelated(productId) {
+    try {
+      const related = await ProductRelated.findAll({
+        where: { product_id: productId },
+        include: [
+          {
+            model: Product,
+            as: 'relatedProduct',
+            attributes: ['id', 'sku', 'name', 'description', 'price', 'main_image'],
+            include: [
+              {
+                model: Brand,
+                as: 'brand',
+                attributes: ['id', 'name']
+              }
+            ]
+          }
+        ]
+      });
+
+      return related;
+    } catch (error) {
+      throw new Error(`Error al obtener productos relacionados: ${error.message}`);
+    }
+  }
+
+  // Agregar producto relacionado
+  async addProductRelated(productId, relatedProductId) {
+    try {
+      const product = await Product.findByPk(productId);
+      if (!product) {
+        throw new Error('Producto no encontrado');
+      }
+
+      const relatedProduct = await Product.findByPk(relatedProductId);
+      if (!relatedProduct) {
+        throw new Error('Producto relacionado no encontrado');
+      }
+
+      const related = await ProductRelated.create({
+        product_id: productId,
+        related_product_id: relatedProductId
+      });
+
+      return related;
+    } catch (error) {
+      throw new Error(`Error al agregar producto relacionado: ${error.message}`);
+    }
+  }
+
+  // Actualizar producto relacionado
+  async updateProductRelated(productId, relatedId, newRelatedProductId) {
+    try {
+      const related = await ProductRelated.findOne({
+        where: { 
+          product_id: productId, 
+          id: relatedId 
+        }
+      });
+
+      if (!related) {
+        throw new Error('Relación no encontrada');
+      }
+
+      const newRelatedProduct = await Product.findByPk(newRelatedProductId);
+      if (!newRelatedProduct) {
+        throw new Error('Nuevo producto relacionado no encontrado');
+      }
+
+      await related.update({
+        related_product_id: newRelatedProductId
+      });
+
+      return related;
+    } catch (error) {
+      throw new Error(`Error al actualizar producto relacionado: ${error.message}`);
+    }
+  }
+
+  // Eliminar producto relacionado
+  async deleteProductRelated(productId, relatedId) {
+    try {
+      const related = await ProductRelated.findOne({
+        where: { 
+          product_id: productId, 
+          id: relatedId 
+        }
+      });
+
+      if (!related) {
+        throw new Error('Relación no encontrada');
+      }
+
+      await related.destroy();
+      return true;
+    } catch (error) {
+      throw new Error(`Error al eliminar producto relacionado: ${error.message}`);
+    }
+  }
 }
 
 module.exports = new ProductService(); 

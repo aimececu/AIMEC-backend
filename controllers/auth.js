@@ -1,12 +1,17 @@
 // =====================================================
-// CONTROLADOR DE AUTENTICACIÓN - SESSION ID BASED
+// CONTROLADOR DE AUTENTICACIÓN - JWT BASED
 // =====================================================
 
 const User = require('../models/User');
-const { v4: uuidv4 } = require('uuid');
+const bcrypt = require('bcryptjs');
+const { generateToken, verifyToken } = require('../config/jwt');
+const { validateEmail, validatePassword, validateText } = require('../config/validation');
+const logger = require('../config/logger');
 
-// Almacén temporal de sesiones (en producción usar Redis)
-const sessions = new Map();
+// Configuración de bcrypt
+const bcryptConfig = {
+  saltRounds: parseInt(process.env.BCRYPT_SALT_ROUNDS) || 12
+};
 
 // Middleware para verificar sesión
 const verifySession = async (req, res, next) => {
@@ -108,49 +113,7 @@ setInterval(cleanupExpiredSessions, 60 * 60 * 1000);
 // CONTROLADORES DE AUTENTICACIÓN
 // =====================================================
 
-/**
- * @swagger
- * /auth/login:
- *   post:
- *     summary: Iniciar sesión
- *     tags: [Autenticación]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - email
- *               - password
- *             properties:
- *               email:
- *                 type: string
- *                 format: email
- *               password:
- *                 type: string
- *     responses:
- *       200:
- *         description: Login exitoso
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
- *                   type: string
- *                 data:
- *                   type: object
- *                   properties:
- *                     sessionId:
- *                       type: string
- *                     user:
- *                       $ref: '#/components/schemas/User'
- *       401:
- *         description: Credenciales inválidas
- */
+
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -160,6 +123,17 @@ const login = async (req, res) => {
       return res.status(400).json({
         success: false,
         error: 'Email y contraseña son requeridos'
+      });
+    }
+
+    // Validar email y contraseña usando las funciones de validación
+    try {
+      validateEmail(email);
+      validatePassword(password);
+    } catch (validationError) {
+      return res.status(400).json({
+        success: false,
+        error: validationError.message
       });
     }
 
@@ -192,27 +166,26 @@ const login = async (req, res) => {
       });
     }
 
-    // Crear sesión
-    const sessionId = createSession(user.id);
+    // Generar token JWT
+    const token = generateToken({
+      id: user.id,
+      email: user.email,
+      role: user.role
+    });
 
     // Actualizar último login
     await user.update({
       last_login: new Date()
     });
 
-    // Configurar cookie (opcional)
-    res.cookie('sessionId', sessionId, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 24 * 60 * 60 * 1000 // 24 horas
-    });
+    // Registrar login exitoso
+    logger.info(`Login exitoso para usuario: ${user.email}`);
 
     res.json({
       success: true,
       message: 'Login exitoso',
       data: {
-        sessionId,
+        token,
         user: {
           id: user.id,
           email: user.email,
@@ -225,7 +198,7 @@ const login = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error en login:', error);
+    logger.error('Error en login:', error);
     res.status(500).json({
       success: false,
       error: 'Error interno del servidor'
@@ -233,18 +206,7 @@ const login = async (req, res) => {
   }
 };
 
-/**
- * @swagger
- * /auth/logout:
- *   post:
- *     summary: Cerrar sesión
- *     tags: [Autenticación]
- *     security:
- *       - sessionAuth: []
- *     responses:
- *       200:
- *         description: Logout exitoso
- */
+
 const logout = async (req, res) => {
   try {
     const sessionId = req.sessionId;
@@ -270,27 +232,7 @@ const logout = async (req, res) => {
   }
 };
 
-/**
- * @swagger
- * /auth/verify:
- *   get:
- *     summary: Verificar sesión
- *     tags: [Autenticación]
- *     security:
- *       - sessionAuth: []
- *     responses:
- *       200:
- *         description: Sesión válida
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   $ref: '#/components/schemas/User'
- */
+
 const verifyAuth = async (req, res) => {
   try {
     res.json({
@@ -315,18 +257,7 @@ const verifyAuth = async (req, res) => {
   }
 };
 
-/**
- * @swagger
- * /auth/profile:
- *   get:
- *     summary: Obtener perfil del usuario
- *     tags: [Autenticación]
- *     security:
- *       - sessionAuth: []
- *     responses:
- *       200:
- *         description: Perfil obtenido exitosamente
- */
+
 const getProfile = async (req, res) => {
   try {
     res.json({
@@ -352,32 +283,8 @@ const getProfile = async (req, res) => {
   }
 };
 
-/**
- * @swagger
- * /auth/profile:
- *   put:
- *     summary: Actualizar perfil del usuario
- *     tags: [Autenticación]
- *     security:
- *       - sessionAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               name:
- *                 type: string
- *               email:
- *                 type: string
- *                 format: email
- *               password:
- *                 type: string
- *     responses:
- *       200:
- *         description: Perfil actualizado exitosamente
- */
+
+
 const updateProfile = async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -425,39 +332,8 @@ const updateProfile = async (req, res) => {
   }
 };
 
-/**
- * @swagger
- * /auth/register:
- *   post:
- *     summary: Registrar nuevo usuario (solo admin)
- *     tags: [Autenticación]
- *     security:
- *       - sessionAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - email
- *               - password
- *               - name
- *             properties:
- *               email:
- *                 type: string
- *                 format: email
- *               password:
- *                 type: string
- *               name:
- *                 type: string
- *               role:
- *                 type: string
- *                 enum: [user, admin]
- *     responses:
- *       201:
- *         description: Usuario creado exitosamente
- */
+
+
 const register = async (req, res) => {
   try {
     const { email, password, name, role = 'user' } = req.body;
@@ -467,6 +343,18 @@ const register = async (req, res) => {
       return res.status(400).json({
         success: false,
         error: 'Email, contraseña y nombre son requeridos'
+      });
+    }
+
+    // Validar datos usando las funciones de validación
+    try {
+      validateEmail(email);
+      validatePassword(password);
+      validateText(name, 'Nombre', 2, 100);
+    } catch (validationError) {
+      return res.status(400).json({
+        success: false,
+        error: validationError.message
       });
     }
 
@@ -482,29 +370,45 @@ const register = async (req, res) => {
       });
     }
 
+    // Encriptar contraseña usando bcrypt
+    const hashedPassword = await bcrypt.hash(password, bcryptConfig.saltRounds);
+
     // Crear usuario
     const newUser = await User.create({
       email: email.toLowerCase(),
-      password,
+      password: hashedPassword,
       name,
       role,
       is_active: true
     });
 
+    // Generar token JWT para el nuevo usuario
+    const token = generateToken({
+      id: newUser.id,
+      email: newUser.email,
+      role: newUser.role
+    });
+
+    // Registrar registro exitoso
+    logger.info(`Nuevo usuario registrado: ${newUser.email}`);
+
     res.status(201).json({
       success: true,
       message: 'Usuario creado exitosamente',
       data: {
-        id: newUser.id,
-        email: newUser.email,
-        name: newUser.name,
-        role: newUser.role,
-        is_active: newUser.is_active
+        token,
+        user: {
+          id: newUser.id,
+          email: newUser.email,
+          name: newUser.name,
+          role: newUser.role,
+          is_active: newUser.is_active
+        }
       }
     });
 
   } catch (error) {
-    console.error('Error en registro:', error);
+    logger.error('Error en registro:', error);
     res.status(500).json({
       success: false,
       error: 'Error interno del servidor'
@@ -512,64 +416,8 @@ const register = async (req, res) => {
   }
 };
 
-/**
- * @swagger
- * /auth/register-initial:
- *   post:
- *     summary: Registrar primer administrador
- *     description: Crear el primer usuario administrador del sistema (solo funciona si no hay usuarios)
- *     tags: [Autenticación]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - email
- *               - password
- *               - name
- *             properties:
- *               email:
- *                 type: string
- *                 format: email
- *                 description: Email del administrador
- *               password:
- *                 type: string
- *                 description: Contraseña del administrador
- *               name:
- *                 type: string
- *                 description: Nombre del administrador
- *     responses:
- *       201:
- *         description: Administrador creado exitosamente
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
- *                   type: string
- *                 data:
- *                   type: object
- *                   properties:
- *                     id:
- *                       type: integer
- *                     email:
- *                       type: string
- *                     name:
- *                       type: string
- *                     role:
- *                       type: string
- *       400:
- *         description: Datos inválidos o ya existe un usuario
- *       409:
- *         description: Ya existe un usuario en el sistema
- *       500:
- *         description: Error del servidor
- */
+
+
 const registerInitial = async (req, res) => {
   try {
     const { email, password, name } = req.body;

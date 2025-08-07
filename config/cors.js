@@ -8,8 +8,10 @@ const corsOptions = {
       return callback(null, true);
     }
     
-    // En producción, usar lista específica
-    const allowedOrigins = ['https://tu-dominio.com'];
+    // En producción, usar configuración de variables de entorno
+    const allowedOrigins = process.env.CORS_ORIGIN ? 
+      process.env.CORS_ORIGIN.split(',').map(origin => origin.trim()) : 
+      ['https://tu-dominio.com'];
     
     if (!origin || allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);

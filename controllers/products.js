@@ -237,6 +237,210 @@ const getProductStats = async (req, res, next) => {
   }
 };
 
+// =====================================================
+// MÉTODOS DE APLICACIONES DE PRODUCTOS
+// =====================================================
+
+// Obtener aplicaciones de un producto
+const getProductApplications = async (req, res, next) => {
+  try {
+    const productId = parseInt(req.params.productId);
+    const applications = await ProductService.getProductApplications(productId);
+    
+    res.json({
+      success: true,
+      data: applications
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Asignar aplicaciones a un producto
+const assignApplicationsToProduct = async (req, res, next) => {
+  try {
+    const productId = parseInt(req.params.productId);
+    const { application_ids } = req.body;
+    
+    if (!application_ids || !Array.isArray(application_ids)) {
+      return res.status(400).json({
+        success: false,
+        error: "application_ids es requerido y debe ser un array"
+      });
+    }
+
+    const result = await ProductService.assignApplicationsToProduct(productId, application_ids);
+    
+    res.json({
+      success: true,
+      message: "Aplicaciones asignadas correctamente",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// =====================================================
+// MÉTODOS DE CARACTERÍSTICAS DE PRODUCTOS
+// =====================================================
+
+// Obtener características de un producto
+const getProductFeatures = async (req, res, next) => {
+  try {
+    const productId = parseInt(req.params.productId);
+    const features = await ProductService.getProductFeatures(productId);
+    
+    res.json({
+      success: true,
+      data: features
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Agregar característica a un producto
+const addProductFeature = async (req, res, next) => {
+  try {
+    const productId = parseInt(req.params.productId);
+    const { feature_id, value, unit } = req.body;
+    
+    if (!feature_id) {
+      return res.status(400).json({
+        success: false,
+        error: "feature_id es requerido"
+      });
+    }
+
+    const feature = await ProductService.addProductFeature(productId, { feature_id, value, unit });
+    
+    res.status(201).json({
+      success: true,
+      message: "Característica agregada correctamente",
+      data: feature
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Actualizar característica de un producto
+const updateProductFeature = async (req, res, next) => {
+  try {
+    const productId = parseInt(req.params.productId);
+    const featureId = parseInt(req.params.featureId);
+    const { value, unit } = req.body;
+
+    const feature = await ProductService.updateProductFeature(productId, featureId, { value, unit });
+    
+    res.json({
+      success: true,
+      message: "Característica actualizada correctamente",
+      data: feature
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Eliminar característica de un producto
+const deleteProductFeature = async (req, res, next) => {
+  try {
+    const productId = parseInt(req.params.productId);
+    const featureId = parseInt(req.params.featureId);
+    
+    await ProductService.deleteProductFeature(productId, featureId);
+    
+    res.json({
+      success: true,
+      message: "Característica eliminada correctamente"
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// =====================================================
+// MÉTODOS DE PRODUCTOS RELACIONADOS
+// =====================================================
+
+// Obtener productos relacionados
+const getProductRelated = async (req, res, next) => {
+  try {
+    const productId = parseInt(req.params.productId);
+    const related = await ProductService.getProductRelated(productId);
+    
+    res.json({
+      success: true,
+      data: related
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Agregar producto relacionado
+const addProductRelated = async (req, res, next) => {
+  try {
+    const productId = parseInt(req.params.productId);
+    const { related_product_id } = req.body;
+    
+    if (!related_product_id) {
+      return res.status(400).json({
+        success: false,
+        error: "related_product_id es requerido"
+      });
+    }
+
+    const related = await ProductService.addProductRelated(productId, related_product_id);
+    
+    res.status(201).json({
+      success: true,
+      message: "Producto relacionado agregado correctamente",
+      data: related
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Actualizar producto relacionado
+const updateProductRelated = async (req, res, next) => {
+  try {
+    const productId = parseInt(req.params.productId);
+    const relatedId = parseInt(req.params.relatedId);
+    const { related_product_id } = req.body;
+
+    const related = await ProductService.updateProductRelated(productId, relatedId, related_product_id);
+    
+    res.json({
+      success: true,
+      message: "Producto relacionado actualizado correctamente",
+      data: related
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Eliminar producto relacionado
+const deleteProductRelated = async (req, res, next) => {
+  try {
+    const productId = parseInt(req.params.productId);
+    const relatedId = parseInt(req.params.relatedId);
+    
+    await ProductService.deleteProductRelated(productId, relatedId);
+    
+    res.json({
+      success: true,
+      message: "Producto relacionado eliminado correctamente"
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getAllProducts,
   getProductById,
@@ -248,5 +452,18 @@ module.exports = {
   getFeaturedProducts,
   getProductsByCategory,
   getProductsByBrand,
-  getProductStats
+  getProductStats,
+  // Métodos de aplicaciones
+  getProductApplications,
+  assignApplicationsToProduct,
+  // Métodos de características
+  getProductFeatures,
+  addProductFeature,
+  updateProductFeature,
+  deleteProductFeature,
+  // Métodos de productos relacionados
+  getProductRelated,
+  addProductRelated,
+  updateProductRelated,
+  deleteProductRelated
 }; 

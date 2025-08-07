@@ -7,23 +7,36 @@ const PORT = process.env.PORT || 3750;
 // Función para obtener la IP local automáticamente
 const getLocalIP = () => {
   const interfaces = os.networkInterfaces();
+  
+  // Priorizar interfaces comunes
+  const priorityInterfaces = ['Wi-Fi', 'Ethernet', 'eth0', 'wlan0'];
+  
+  // Buscar en interfaces prioritarias primero
+  for (const priorityName of priorityInterfaces) {
+    if (interfaces[priorityName]) {
+      for (const interface of interfaces[priorityName]) {
+        if (interface.family === 'IPv4' && !interface.internal) {
+          return interface.address;
+        }
+      }
+    }
+  }
+  
+  // Buscar en todas las interfaces si no se encuentra en las prioritarias
   for (const name of Object.keys(interfaces)) {
     for (const interface of interfaces[name]) {
-      // Ignorar interfaces no IPv4 y loopback
       if (interface.family === 'IPv4' && !interface.internal) {
         return interface.address;
       }
     }
   }
-  return '0.0.0.0'; // Fallback si no se encuentra IP
+  
+  return 'localhost'; // Fallback más amigable
 };
 
 const HOST = '0.0.0.0'; // Escuchar en todas las interfaces
+const LOCAL_IP = getLocalIP(); // IP local para mostrar en logs
 
 app.listen(PORT, HOST, () => {
-  logger.serverStart(PORT, HOST);
-  logger.info('⏹️  Presiona Ctrl+C para detener el servidor');
-  logger.info(`🌐 Servidor disponible en:`);
-  logger.info(`   - Local: http://localhost:${PORT}`);
-  logger.info(`   - Network: http://${getLocalIP()}:${PORT}`);
+  logger.serverStart(PORT, LOCAL_IP);
 }); 

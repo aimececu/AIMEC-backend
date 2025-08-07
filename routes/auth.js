@@ -1,6 +1,22 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/auth');
+const { authLimiter } = require('../config/rateLimit');
+const { validateInput } = require('../config/validation');
+
+// Esquema de validación para login
+const loginSchema = {
+  email: { type: 'email', required: true },
+  password: { type: 'password', required: true }
+};
+
+// Esquema de validación para registro
+const registerSchema = {
+  name: { type: 'text', required: true, minLength: 2, maxLength: 100 },
+  email: { type: 'email', required: true },
+  password: { type: 'password', required: true },
+  role: { type: 'text', required: false, maxLength: 20 }
+};
 
 /**
  * @swagger
@@ -78,7 +94,7 @@ const authController = require('../controllers/auth');
  *       500:
  *         description: Error del servidor
  */
-router.post('/login', authController.login);
+router.post('/login', authLimiter, validateInput(loginSchema), authController.login);
 
 /**
  * @swagger
@@ -99,7 +115,7 @@ router.post('/logout', authController.verifySession, authController.logout);
 
 /**
  * @swagger
- * /auth/verify:
+ * /api/auth/verify:
  *   get:
  *     summary: Verificar autenticación
  *     description: Verificar si la sesión es válida y obtener información del usuario

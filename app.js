@@ -7,14 +7,18 @@ const setupMiddlewares = require('./config/middlewares');
 const setupSwaggerUI = require('./config/swagger-ui');
 const logger = require('./config/logger');
 
+// Importar configuraciones adicionales
+const { authenticateToken } = require('./config/jwt');
+const { validateInput } = require('./config/validation');
+
 // Importar rutas
 const productRoutes = require('./routes/products');
 const categoryRoutes = require('./routes/categories');
 const specificationRoutes = require('./routes/specifications');
 const authRoutes = require('./routes/auth');
 const applicationRoutes = require('./routes/applications');
-const productRelatedRoutes = require('./routes/productRelated');
-const productFeaturesRoutes = require('./routes/productFeatures');
+
+const fileRoutes = require('./routes/files');
 
 const app = express();
 
@@ -59,6 +63,9 @@ logger.swaggerGenerated(specs);
 // =====================================================
 // RUTAS PRINCIPALES
 // =====================================================
+
+// Rutas de archivos (AWS S3)
+app.use('/api/files', fileRoutes);
 
 /**
  * @swagger
@@ -176,14 +183,8 @@ app.use("/api/specifications", specificationRoutes);
 // Rutas de autenticación
 app.use("/api/auth", authRoutes);
 
-// Rutas de aplicaciones
+// Rutas de aplicaciones (solo para CRUD general)
 app.use("/api/applications", applicationRoutes);
-
-// Rutas de productos relacionados
-app.use("/api/products", productRelatedRoutes);
-
-// Rutas de características de productos
-app.use("/api/products", productFeaturesRoutes);
 
 // =====================================================
 // MIDDLEWARE DE MANEJO DE ERRORES

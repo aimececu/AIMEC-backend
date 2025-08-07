@@ -2,16 +2,7 @@ const Application = require('../models/Application');
 const ProductApplication = require('../models/ProductApplication');
 const Product = require('../models/Product');
 
-/**
- * @swagger
- * /applications:
- *   get:
- *     summary: Obtener todas las aplicaciones
- *     tags: [Aplicaciones]
- *     responses:
- *       200:
- *         description: Lista de aplicaciones
- */
+
 const getAllApplications = async (req, res) => {
   try {
     const applications = await Application.findAll({
@@ -32,33 +23,7 @@ const getAllApplications = async (req, res) => {
   }
 };
 
-/**
- * @swagger
- * /applications:
- *   post:
- *     summary: Crear nueva aplicación
- *     tags: [Aplicaciones]
- *     security:
- *       - sessionAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - name
- *             properties:
- *               name:
- *                 type: string
- *               description:
- *                 type: string
- *               icon:
- *                 type: string
- *     responses:
- *       201:
- *         description: Aplicación creada exitosamente
- */
+
 const createApplication = async (req, res) => {
   try {
     const { name, description, icon, sort_order = 0 } = req.body;
@@ -91,39 +56,10 @@ const createApplication = async (req, res) => {
   }
 };
 
-/**
- * @swagger
- * /applications/{id}:
- *   put:
- *     summary: Actualizar aplicación
- *     tags: [Aplicaciones]
- *     security:
- *       - sessionAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               name:
- *                 type: string
- *               description:
- *                 type: string
- *               icon:
- *                 type: string
- *               is_active:
- *                 type: boolean
- *     responses:
- *       200:
- *         description: Aplicación actualizada exitosamente
- */
+
+
+
+
 const updateApplication = async (req, res) => {
   try {
     const { id } = req.params;
@@ -159,24 +95,7 @@ const updateApplication = async (req, res) => {
   }
 };
 
-/**
- * @swagger
- * /applications/{id}:
- *   delete:
- *     summary: Eliminar aplicación
- *     tags: [Aplicaciones]
- *     security:
- *       - sessionAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *     responses:
- *       200:
- *         description: Aplicación eliminada exitosamente
- */
+
 const deleteApplication = async (req, res) => {
   try {
     const { id } = req.params;
@@ -216,22 +135,11 @@ const deleteApplication = async (req, res) => {
   }
 };
 
-/**
- * @swagger
- * /products/{productId}/applications:
- *   get:
- *     summary: Obtener aplicaciones de un producto
- *     tags: [Productos]
- *     parameters:
- *       - in: path
- *         name: productId
- *         required: true
- *         schema:
- *           type: integer
- *     responses:
- *       200:
- *         description: Aplicaciones del producto
- */
+
+
+
+
+
 const getProductApplications = async (req, res) => {
   try {
     const { productId } = req.params;
@@ -261,37 +169,7 @@ const getProductApplications = async (req, res) => {
   }
 };
 
-/**
- * @swagger
- * /products/{productId}/applications:
- *   post:
- *     summary: Asignar aplicaciones a un producto
- *     tags: [Productos]
- *     security:
- *       - sessionAuth: []
- *     parameters:
- *       - in: path
- *         name: productId
- *         required: true
- *         schema:
- *           type: integer
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - applicationIds
- *             properties:
- *               applicationIds:
- *                 type: array
- *                 items:
- *                   type: integer
- *     responses:
- *       200:
- *         description: Aplicaciones asignadas exitosamente
- */
+
 const assignApplicationsToProduct = async (req, res) => {
   try {
     const { productId } = req.params;
