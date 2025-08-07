@@ -254,5 +254,6 @@ app.use((req, res) => {
     res.status(404).send('Endpoint de documentación no encontrado');
   }
 });
+// =====================================================
 
 module.exports = app;
