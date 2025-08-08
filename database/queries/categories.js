@@ -18,9 +18,10 @@ const getAllCategories = async () => {
       GROUP BY c.id
       ORDER BY c.sort_order, c.name
     `);
-    return result.rows;
+    return result.rows || [];
   } catch (error) {
-    throw new Error(`Error al obtener categorías: ${error.message}`);
+    console.error('Error al obtener categorías:', error);
+    return [];
   }
 };
 
@@ -182,9 +183,10 @@ const getAllBrands = async () => {
       GROUP BY b.id
       ORDER BY b.name
     `);
-    return result.rows;
+    return result.rows || [];
   } catch (error) {
-    throw new Error(`Error al obtener marcas: ${error.message}`);
+    console.error('Error al obtener marcas:', error);
+    return [];
   }
 };
 

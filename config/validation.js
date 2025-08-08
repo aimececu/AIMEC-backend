@@ -36,14 +36,17 @@ const validatePassword = (password) => {
     throw new Error('Contraseña es requerida');
   }
   
-  if (password.length < 8) {
-    throw new Error('La contraseña debe tener al menos 8 caracteres');
+  if (password.length < 6) {
+    throw new Error('La contraseña debe tener al menos 6 caracteres');
   }
   
   if (validationConfig.strict) {
-    // Validaciones adicionales en modo estricto
-    if (!validator.matches(password, /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)) {
-      throw new Error('La contraseña debe contener al menos una letra mayúscula, una minúscula, un número y un carácter especial');
+    // Validaciones adicionales en modo estricto (más flexibles)
+    const hasLetter = /[a-zA-Z]/.test(password);
+    const hasNumber = /\d/.test(password);
+    
+    if (!hasLetter || !hasNumber) {
+      throw new Error('La contraseña debe contener al menos una letra y un número');
     }
     
     if (password.length > 128) {

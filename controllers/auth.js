@@ -1,10 +1,10 @@
 // =====================================================
-// CONTROLADOR DE AUTENTICACIÓN - JWT BASED
+// CONTROLADOR DE AUTENTICACIÓN - SESSION ID BASED
 // =====================================================
 
 const User = require('../models/User');
+const SessionService = require('../services/SessionService');
 const bcrypt = require('bcryptjs');
-const { generateToken, verifyToken } = require('../config/jwt');
 const { validateEmail, validatePassword, validateText } = require('../config/validation');
 const logger = require('../config/logger');
 
@@ -13,50 +13,34 @@ const bcryptConfig = {
   saltRounds: parseInt(process.env.BCRYPT_SALT_ROUNDS) || 12
 };
 
-// Middleware para verificar sesión
+// Middleware para verificar sesión (solo sessionId)
 const verifySession = async (req, res, next) => {
   try {
     const sessionId = req.headers['x-session-id'] || req.cookies?.sessionId;
     
     if (!sessionId) {
+      console.log('Verificación de sesión fallida: No se proporcionó sessionId');
       return res.status(401).json({
         success: false,
         error: 'No se proporcionó ID de sesión'
       });
     }
 
-    const session = sessions.get(sessionId);
-    if (!session) {
+    // Verificar sesión (incluye renovación automática de tokens internos)
+    const sessionData = await SessionService.verifySession(sessionId);
+
+    if (!sessionData) {
+      console.log(`Verificación de sesión fallida: Sesión inválida o expirada - ${sessionId.substring(0, 10)}...`);
       return res.status(401).json({
         success: false,
         error: 'Sesión inválida o expirada'
       });
     }
 
-    // Verificar si la sesión no ha expirado (24 horas)
-    const now = Date.now();
-    if (now > session.expiresAt) {
-      sessions.delete(sessionId);
-      return res.status(401).json({
-        success: false,
-        error: 'Sesión expirada'
-      });
-    }
-
-    // Obtener usuario actualizado
-    const user = await User.findByPk(session.userId);
-    if (!user || !user.is_active) {
-      sessions.delete(sessionId);
-      return res.status(401).json({
-        success: false,
-        error: 'Usuario no encontrado o inactivo'
-      });
-    }
-
     // Agregar información de sesión y usuario a la request
-    req.sessionId = sessionId;
-    req.user = user;
-    req.session = session;
+    req.sessionId = sessionData.sessionId;
+    req.user = sessionData.user;
+    req.session = sessionData;
 
     next();
   } catch (error) {
@@ -79,46 +63,26 @@ const requireAdmin = async (req, res, next) => {
   next();
 };
 
-// Función para crear sesión
-const createSession = (userId) => {
-  const sessionId = uuidv4();
-  const expiresAt = Date.now() + (24 * 60 * 60 * 1000); // 24 horas
-
-  const session = {
-    sessionId,
-    userId,
-    createdAt: Date.now(),
-    expiresAt,
-    lastActivity: Date.now()
-  };
-
-  sessions.set(sessionId, session);
-  return sessionId;
+// Función para obtener IP del cliente
+const getClientIP = (req) => {
+  return req.headers['x-forwarded-for'] || 
+         req.connection.remoteAddress || 
+         req.socket.remoteAddress ||
+         (req.connection.socket ? req.connection.socket.remoteAddress : null) ||
+         'unknown';
 };
 
-// Función para limpiar sesiones expiradas
-const cleanupExpiredSessions = () => {
-  const now = Date.now();
-  for (const [sessionId, session] of sessions.entries()) {
-    if (now > session.expiresAt) {
-      sessions.delete(sessionId);
-    }
-  }
+// Función para obtener User Agent
+const getUserAgent = (req) => {
+  return req.headers['user-agent'] || 'unknown';
 };
 
-// Ejecutar limpieza cada hora
-setInterval(cleanupExpiredSessions, 60 * 60 * 1000);
-
-// =====================================================
-// CONTROLADORES DE AUTENTICACIÓN
-// =====================================================
-
-
+// Login de usuario
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Validar campos requeridos
+    // Validaciones
     if (!email || !password) {
       return res.status(400).json({
         success: false,
@@ -126,26 +90,27 @@ const login = async (req, res) => {
       });
     }
 
-    // Validar email y contraseña usando las funciones de validación
-    try {
-      validateEmail(email);
-      validatePassword(password);
-    } catch (validationError) {
+    if (!validateEmail(email)) {
       return res.status(400).json({
         success: false,
-        error: validationError.message
+        error: 'Formato de email inválido'
       });
     }
 
-    // Buscar usuario
-    const user = await User.findOne({
-      where: { email: email.toLowerCase() }
-    });
-
+    // Buscar usuario por email
+    const user = await User.findOne({ where: { email } });
     if (!user) {
       return res.status(401).json({
         success: false,
         error: 'Credenciales inválidas'
+      });
+    }
+
+    // Verificar que el usuario esté activo
+    if (!user.is_active) {
+      return res.status(401).json({
+        success: false,
+        error: 'Usuario inactivo'
       });
     }
 
@@ -158,47 +123,41 @@ const login = async (req, res) => {
       });
     }
 
-    // Verificar si el usuario está activo
-    if (!user.is_active) {
-      return res.status(401).json({
-        success: false,
-        error: 'Cuenta desactivada'
-      });
-    }
+    // Obtener información del cliente
+    const ipAddress = getClientIP(req);
+    const userAgent = getUserAgent(req);
 
-    // Generar token JWT
-    const token = generateToken({
-      id: user.id,
-      email: user.email,
-      role: user.role
+    // Crear nueva sesión (solo retorna sessionId)
+    const sessionData = await SessionService.createSession(user.id, ipAddress, userAgent);
+
+    // Configurar cookie de sessionId
+    res.cookie('sessionId', sessionData.sessionId, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 30 * 24 * 60 * 60 * 1000 // 30 días
     });
 
-    // Actualizar último login
-    await user.update({
-      last_login: new Date()
-    });
-
-    // Registrar login exitoso
-    logger.info(`Login exitoso para usuario: ${user.email}`);
-
+    // Respuesta exitosa (solo sessionId)
     res.json({
       success: true,
       message: 'Login exitoso',
       data: {
-        token,
+        sessionId: sessionData.sessionId,
+        expiresAt: sessionData.expiresAt,
         user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          is_active: user.is_active,
-          last_login: user.last_login
+          id: sessionData.user.id,
+          email: sessionData.user.email,
+          name: sessionData.user.name,
+          role: sessionData.user.role
         }
       }
     });
 
+    logger.info(`Usuario ${user.email} inició sesión desde ${ipAddress}`);
+
   } catch (error) {
-    logger.error('Error en login:', error);
+    console.error('Error en login:', error);
     res.status(500).json({
       success: false,
       error: 'Error interno del servidor'
@@ -206,13 +165,13 @@ const login = async (req, res) => {
   }
 };
 
-
+// Logout de usuario
 const logout = async (req, res) => {
   try {
-    const sessionId = req.sessionId;
-    
+    const sessionId = req.sessionId || req.headers['x-session-id'] || req.cookies?.sessionId;
+
     if (sessionId) {
-      sessions.delete(sessionId);
+      await SessionService.deactivateSession(sessionId);
     }
 
     // Limpiar cookie
@@ -223,6 +182,10 @@ const logout = async (req, res) => {
       message: 'Logout exitoso'
     });
 
+    if (req.user) {
+      logger.info(`Usuario ${req.user.email} cerró sesión`);
+    }
+
   } catch (error) {
     console.error('Error en logout:', error);
     res.status(500).json({
@@ -232,24 +195,26 @@ const logout = async (req, res) => {
   }
 };
 
-
+// Verificar autenticación
 const verifyAuth = async (req, res) => {
   try {
     res.json({
       success: true,
-      message: 'Sesión válida',
       data: {
-        id: req.user.id,
-        email: req.user.email,
-        name: req.user.name,
-        role: req.user.role,
-        is_active: req.user.is_active,
-        last_login: req.user.last_login
+        user: {
+          id: req.user.id,
+          email: req.user.email,
+          name: req.user.name,
+          role: req.user.role
+        },
+        session: {
+          sessionId: req.session.sessionId,
+          expiresAt: req.session.expiresAt
+        }
       }
     });
-
   } catch (error) {
-    console.error('Error en verificación:', error);
+    console.error('Error en verificación de autenticación:', error);
     res.status(500).json({
       success: false,
       error: 'Error interno del servidor'
@@ -257,23 +222,55 @@ const verifyAuth = async (req, res) => {
   }
 };
 
+// Verificar estado de sesión (público)
+const checkSessionStatus = async (req, res) => {
+  try {
+    const sessionId = req.headers['x-session-id'] || req.cookies?.sessionId;
+    
+    if (!sessionId) {
+      return res.json({
+        success: true,
+        hasValidSession: false,
+        message: 'No hay sesión activa'
+      });
+    }
 
+    const sessionData = await SessionService.verifySession(sessionId);
+    
+    if (!sessionData) {
+      return res.json({
+        success: true,
+        hasValidSession: false,
+        message: 'Sesión expirada o inválida'
+      });
+    }
+
+    return res.json({
+      success: true,
+      hasValidSession: true,
+      message: 'Sesión válida'
+    });
+  } catch (error) {
+    console.error('Error verificando estado de sesión:', error);
+    return res.json({
+      success: true,
+      hasValidSession: false,
+      message: 'Error verificando sesión'
+    });
+  }
+};
+
+// Obtener perfil del usuario
 const getProfile = async (req, res) => {
   try {
-    res.json({
-      success: true,
-      data: {
-        id: req.user.id,
-        email: req.user.email,
-        name: req.user.name,
-        role: req.user.role,
-        is_active: req.user.is_active,
-        last_login: req.user.last_login,
-        created_at: req.user.created_at,
-        updated_at: req.user.updated_at
-      }
+    const user = await User.findByPk(req.user.id, {
+      attributes: ['id', 'email', 'name', 'role', 'is_active', 'last_login', 'created_at']
     });
 
+    res.json({
+      success: true,
+      data: user
+    });
   } catch (error) {
     console.error('Error al obtener perfil:', error);
     res.status(500).json({
@@ -283,22 +280,37 @@ const getProfile = async (req, res) => {
   }
 };
 
-
-
+// Actualizar perfil del usuario
 const updateProfile = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
-    const updateData = {};
+    const { name, email, currentPassword, newPassword } = req.body;
 
-    if (name) updateData.name = name;
-    if (email) updateData.email = email.toLowerCase();
-    if (password) updateData.password = password;
-
-    // Verificar si el email ya existe (si se está actualizando)
-    if (email && email !== req.user.email) {
-      const existingUser = await User.findOne({
-        where: { email: email.toLowerCase() }
+    const user = await User.findByPk(req.user.id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'Usuario no encontrado'
       });
+    }
+
+    // Validaciones
+    if (name && !validateText(name, 2, 100)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Nombre debe tener entre 2 y 100 caracteres'
+      });
+    }
+
+    if (email && !validateEmail(email)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Formato de email inválido'
+      });
+    }
+
+    // Verificar si el email ya existe (si se está cambiando)
+    if (email && email !== user.email) {
+      const existingUser = await User.findOne({ where: { email } });
       if (existingUser) {
         return res.status(400).json({
           success: false,
@@ -307,19 +319,49 @@ const updateProfile = async (req, res) => {
       }
     }
 
-    // Actualizar usuario
-    await req.user.update(updateData);
+    // Si se quiere cambiar la contraseña
+    if (newPassword) {
+      if (!currentPassword) {
+        return res.status(400).json({
+          success: false,
+          error: 'Contraseña actual es requerida para cambiar la contraseña'
+        });
+      }
+
+      // Verificar contraseña actual
+      const isValidPassword = await user.comparePassword(currentPassword);
+      if (!isValidPassword) {
+        return res.status(400).json({
+          success: false,
+          error: 'Contraseña actual incorrecta'
+        });
+      }
+
+      // Validar nueva contraseña
+      if (!validatePassword(newPassword)) {
+        return res.status(400).json({
+          success: false,
+          error: 'La nueva contraseña debe tener al menos 6 caracteres'
+        });
+      }
+
+      user.password = newPassword; // Se hasheará automáticamente
+    }
+
+    // Actualizar campos
+    if (name) user.name = name;
+    if (email) user.email = email;
+
+    await user.save();
 
     res.json({
       success: true,
-      message: 'Perfil actualizado exitosamente',
+      message: 'Perfil actualizado correctamente',
       data: {
-        id: req.user.id,
-        email: req.user.email,
-        name: req.user.name,
-        role: req.user.role,
-        is_active: req.user.is_active,
-        last_login: req.user.last_login
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role
       }
     });
 
@@ -332,13 +374,12 @@ const updateProfile = async (req, res) => {
   }
 };
 
-
-
+// Registrar nuevo usuario (solo admin)
 const register = async (req, res) => {
   try {
     const { email, password, name, role = 'user' } = req.body;
 
-    // Validar campos requeridos
+    // Validaciones
     if (!email || !password || !name) {
       return res.status(400).json({
         success: false,
@@ -346,23 +387,36 @@ const register = async (req, res) => {
       });
     }
 
-    // Validar datos usando las funciones de validación
-    try {
-      validateEmail(email);
-      validatePassword(password);
-      validateText(name, 'Nombre', 2, 100);
-    } catch (validationError) {
+    if (!validateEmail(email)) {
       return res.status(400).json({
         success: false,
-        error: validationError.message
+        error: 'Formato de email inválido'
+      });
+    }
+
+    if (!validatePassword(password)) {
+      return res.status(400).json({
+        success: false,
+        error: 'La contraseña debe tener al menos 6 caracteres'
+      });
+    }
+
+    if (!validateText(name, 2, 100)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Nombre debe tener entre 2 y 100 caracteres'
+      });
+    }
+
+    if (!['admin', 'user'].includes(role)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Rol inválido'
       });
     }
 
     // Verificar si el email ya existe
-    const existingUser = await User.findOne({
-      where: { email: email.toLowerCase() }
-    });
-
+    const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
       return res.status(400).json({
         success: false,
@@ -370,45 +424,30 @@ const register = async (req, res) => {
       });
     }
 
-    // Encriptar contraseña usando bcrypt
-    const hashedPassword = await bcrypt.hash(password, bcryptConfig.saltRounds);
-
     // Crear usuario
-    const newUser = await User.create({
-      email: email.toLowerCase(),
-      password: hashedPassword,
+    const user = await User.create({
+      email,
+      password,
       name,
       role,
       is_active: true
     });
 
-    // Generar token JWT para el nuevo usuario
-    const token = generateToken({
-      id: newUser.id,
-      email: newUser.email,
-      role: newUser.role
-    });
-
-    // Registrar registro exitoso
-    logger.info(`Nuevo usuario registrado: ${newUser.email}`);
-
     res.status(201).json({
       success: true,
-      message: 'Usuario creado exitosamente',
+      message: 'Usuario registrado correctamente',
       data: {
-        token,
-        user: {
-          id: newUser.id,
-          email: newUser.email,
-          name: newUser.name,
-          role: newUser.role,
-          is_active: newUser.is_active
-        }
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role
       }
     });
 
+    logger.info(`Usuario ${email} registrado por admin ${req.user.email}`);
+
   } catch (error) {
-    logger.error('Error en registro:', error);
+    console.error('Error en registro:', error);
     res.status(500).json({
       success: false,
       error: 'Error interno del servidor'
@@ -416,64 +455,72 @@ const register = async (req, res) => {
   }
 };
 
-
-
-const registerInitial = async (req, res) => {
+// Renovar sesión (para compatibilidad)
+const renewSession = async (req, res) => {
   try {
-    const { email, password, name } = req.body;
+    const sessionId = req.sessionId || req.headers['x-session-id'] || req.cookies?.sessionId;
 
-    // Validar campos requeridos
-    if (!email || !password || !name) {
+    if (!sessionId) {
       return res.status(400).json({
         success: false,
-        error: 'Email, contraseña y nombre son requeridos'
+        error: 'Session ID requerido'
       });
     }
 
-    // Verificar si ya existe algún usuario en el sistema
-    const userCount = await User.count();
-    if (userCount > 0) {
-      return res.status(409).json({
-        success: false,
-        error: 'Ya existe un usuario en el sistema. Use /api/auth/register con autenticación de administrador.'
-      });
-    }
+    const sessionData = await SessionService.renewAccessToken(sessionId);
 
-    // Verificar si el email ya existe
-    const existingUser = await User.findOne({
-      where: { email: email.toLowerCase() }
-    });
-
-    if (existingUser) {
-      return res.status(400).json({
-        success: false,
-        error: 'El email ya está registrado'
-      });
-    }
-
-    // Crear el primer administrador
-    const newUser = await User.create({
-      email: email.toLowerCase(),
-      password,
-      name,
-      role: 'admin', // Forzar rol de administrador
-      is_active: true
-    });
-
-    res.status(201).json({
+    res.json({
       success: true,
-      message: 'Primer administrador creado exitosamente',
+      message: 'Sesión renovada correctamente',
       data: {
-        id: newUser.id,
-        email: newUser.email,
-        name: newUser.name,
-        role: newUser.role,
-        is_active: newUser.is_active
+        sessionId: sessionData.sessionId,
+        expiresAt: sessionData.expiresAt
       }
     });
 
   } catch (error) {
-    console.error('Error en registro inicial:', error);
+    console.error('Error al renovar sesión:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error interno del servidor'
+    });
+  }
+};
+
+// Obtener sesiones del usuario
+const getUserSessions = async (req, res) => {
+  try {
+    const sessions = await SessionService.getUserSessions(req.user.id);
+
+    res.json({
+      success: true,
+      data: sessions
+    });
+
+  } catch (error) {
+    console.error('Error al obtener sesiones:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error interno del servidor'
+    });
+  }
+};
+
+// Cerrar todas las sesiones del usuario
+const logoutAllSessions = async (req, res) => {
+  try {
+    await SessionService.deactivateAllUserSessions(req.user.id);
+
+    // Limpiar cookie de la sesión actual
+    res.clearCookie('sessionId');
+
+    res.json({
+      success: true,
+      message: 'Todas las sesiones han sido cerradas'
+    });
+
+  } catch (error) {
+    console.error('Error al cerrar todas las sesiones:', error);
     res.status(500).json({
       success: false,
       error: 'Error interno del servidor'
@@ -482,13 +529,16 @@ const registerInitial = async (req, res) => {
 };
 
 module.exports = {
+  verifySession,
+  requireAdmin,
   login,
   logout,
   verifyAuth,
+  checkSessionStatus,
   getProfile,
   updateProfile,
   register,
-  registerInitial,
-  verifySession,
-  requireAdmin
+  renewSession,
+  getUserSessions,
+  logoutAllSessions
 }; 

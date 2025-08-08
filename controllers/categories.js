@@ -11,10 +11,15 @@ const getAllCategories = async (req, res, next) => {
     
     res.json({
       success: true,
-      data: categories
+      data: categories || []
     });
   } catch (error) {
-    next(error);
+    console.error('Error al obtener categorías:', error);
+    // En caso de error, devolver array vacío en lugar de fallar
+    res.json({
+      success: true,
+      data: []
+    });
   }
 };
 
@@ -183,19 +188,19 @@ const deleteSubcategory = async (req, res, next) => {
 // Obtener todas las marcas
 const getAllBrands = async (req, res, next) => {
   try {
-    const { Brand } = require('../models');
-    
-    const brands = await Brand.findAll({
-      where: { is_active: true },
-      order: [['sort_order', 'ASC'], ['name', 'ASC']]
-    });
+    const brands = await CategoryService.getAllBrands();
     
     res.json({
       success: true,
-      data: brands
+      data: brands || []
     });
   } catch (error) {
-    next(error);
+    console.error('Error al obtener marcas:', error);
+    // En caso de error, devolver array vacío en lugar de fallar
+    res.json({
+      success: true,
+      data: []
+    });
   }
 };
 

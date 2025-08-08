@@ -16,7 +16,7 @@ const productRoutes = require('./routes/products');
 const categoryRoutes = require('./routes/categories');
 const specificationRoutes = require('./routes/specifications');
 const authRoutes = require('./routes/auth');
-const applicationRoutes = require('./routes/applications');
+
 
 const fileRoutes = require('./routes/files');
 
@@ -38,8 +38,16 @@ setupMiddlewares(app);
 app.use(async (req, res, next) => {
   if (!req.app.locals.dbInitialized) {
     try {
-      // Solo probar conexión, sin sincronización automática
+      // Probar conexión
       await testConnection();
+      
+                        // Sincronizar base de datos automáticamente
+                  const { syncDatabase } = require('./config/database');
+                  await syncDatabase();
+                  
+                  // Crear usuario administrador por defecto
+                  const { createAdminUser } = require('./scripts/create-admin-user');
+                  await createAdminUser();
       
       req.app.locals.dbInitialized = true;
       logger.databaseConnected();
@@ -150,7 +158,7 @@ app.get("/", (req, res) => {
         products: "/api/products",
         categories: "/api/categories",
         specifications: "/api/specifications",
-        applications: "/api/applications",
+        
         auth: "/api/auth"
     }
   });
@@ -183,8 +191,7 @@ app.use("/api/specifications", specificationRoutes);
 // Rutas de autenticación
 app.use("/api/auth", authRoutes);
 
-// Rutas de aplicaciones (solo para CRUD general)
-app.use("/api/applications", applicationRoutes);
+
 
 // =====================================================
 // MIDDLEWARE DE MANEJO DE ERRORES

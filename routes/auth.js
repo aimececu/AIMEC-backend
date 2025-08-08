@@ -115,16 +115,40 @@ router.post('/logout', authController.verifySession, authController.logout);
 
 /**
  * @swagger
+ * /api/auth/check-session:
+ *   get:
+ *     summary: Verificar estado de sesión (público)
+ *     description: Verifica si hay una sesión válida sin requerir autenticación
+ *     tags: [Autenticación]
+ *     responses:
+ *       200:
+ *         description: Estado de la sesión
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 hasValidSession:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ */
+router.get('/check-session', authController.checkSessionStatus);
+
+/**
+ * @swagger
  * /api/auth/verify:
  *   get:
  *     summary: Verificar autenticación
- *     description: Verificar si la sesión es válida y obtener información del usuario
+ *     description: Verifica si el usuario está autenticado y retorna información de la sesión
  *     tags: [Autenticación]
  *     security:
- *       - sessionAuth: []
+ *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Sesión válida
+ *         description: Usuario autenticado
  *         content:
  *           application/json:
  *             schema:
@@ -135,62 +159,87 @@ router.post('/logout', authController.verifySession, authController.logout);
  *                 data:
  *                   type: object
  *                   properties:
- *                     id:
- *                       type: integer
- *                     email:
- *                       type: string
- *                     name:
- *                       type: string
- *                     role:
- *                       type: string
- *                     is_active:
- *                       type: boolean
- *                     last_login:
- *                       type: string
+ *                     user:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: integer
+ *                         email:
+ *                           type: string
+ *                         name:
+ *                           type: string
+ *                         role:
+ *                           type: string
+ *                     session:
+ *                       type: object
+ *                       properties:
+ *                         sessionId:
+ *                           type: string
+ *                         expiresAt:
+ *                           type: string
  *       401:
- *         description: Sesión inválida
+ *         description: No autenticado
  */
 router.get('/verify', authController.verifySession, authController.verifyAuth);
 
 /**
  * @swagger
- * /api/auth/register-initial:
+ * /api/auth/renew-session:
  *   post:
- *     summary: Registrar primer administrador
- *     description: Crear el primer usuario administrador del sistema (solo funciona si no hay usuarios)
+ *     summary: Renovar sesión
+ *     description: Renovar la sesión actual del usuario
  *     tags: [Autenticación]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - email
- *               - password
- *               - name
- *             properties:
- *               email:
- *                 type: string
- *                 format: email
- *                 description: Email del administrador
- *               password:
- *                 type: string
- *                 description: Contraseña del administrador
- *               name:
- *                 type: string
- *                 description: Nombre del administrador
+ *     security:
+ *       - sessionAuth: []
  *     responses:
- *       201:
- *         description: Administrador creado exitosamente
+ *       200:
+ *         description: Sesión renovada exitosamente
  *       400:
- *         description: Datos inválidos
- *       409:
- *         description: Ya existe un usuario en el sistema
+ *         description: Session ID requerido
+ *       401:
+ *         description: Sesión inválida
  *       500:
  *         description: Error del servidor
  */
-router.post('/register-initial', authController.registerInitial);
+router.post('/renew-session', authController.verifySession, authController.renewSession);
+
+/**
+ * @swagger
+ * /api/auth/sessions:
+ *   get:
+ *     summary: Obtener sesiones del usuario
+ *     description: Obtener todas las sesiones activas del usuario actual
+ *     tags: [Autenticación]
+ *     security:
+ *       - sessionAuth: []
+ *     responses:
+ *       200:
+ *         description: Sesiones obtenidas exitosamente
+ *       401:
+ *         description: No autorizado
+ *       500:
+ *         description: Error del servidor
+ */
+router.get('/sessions', authController.verifySession, authController.getUserSessions);
+
+/**
+ * @swagger
+ * /api/auth/logout-all:
+ *   post:
+ *     summary: Cerrar todas las sesiones
+ *     description: Cerrar todas las sesiones activas del usuario actual
+ *     tags: [Autenticación]
+ *     security:
+ *       - sessionAuth: []
+ *     responses:
+ *       200:
+ *         description: Todas las sesiones cerradas exitosamente
+ *       401:
+ *         description: No autorizado
+ *       500:
+ *         description: Error del servidor
+ */
+router.post('/logout-all', authController.verifySession, authController.logoutAllSessions);
 
 /**
  * @swagger

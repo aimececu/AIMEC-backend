@@ -103,7 +103,23 @@ const cleanConstraints = async () => {
   }
 };
 
-// Función para sincronización inteligente
+// Función para sincronización automática
+const syncDatabase = async () => {
+  try {
+    console.log('🔄 Sincronizando base de datos...');
+    
+    // Sincronizar todos los modelos
+    await sequelize.sync({ alter: true });
+    
+    console.log('✅ Base de datos sincronizada correctamente');
+    return true;
+  } catch (error) {
+    console.error('❌ Error al sincronizar base de datos:', error.message);
+    return false;
+  }
+};
+
+// Función para sincronización inteligente (mantener para compatibilidad)
 const smartSync = async () => {
   try {
     const currentHash = getModelsHash();
@@ -111,11 +127,9 @@ const smartSync = async () => {
     
     // Si no hay hash guardado o ha cambiado, sincronizar
     if (!savedHash || currentHash !== savedHash) {
-      console.log('🔄 Detectados cambios en los modelos, usando sincronización inteligente...');
+      console.log('🔄 Detectados cambios en los modelos, sincronizando...');
       
-      // Usar el script inteligente mejorado
-      const { smartSync: improvedSmartSync } = require('../smart-sync');
-      const result = await improvedSmartSync();
+      const result = await syncDatabase();
       
       if (result) {
         // Guardar el nuevo hash
@@ -222,5 +236,6 @@ module.exports = {
   sequelize,
   testConnection,
   smartSync,
+  syncDatabase,
   closeConnection
 }; 

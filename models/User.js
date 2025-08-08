@@ -13,35 +13,38 @@ const User = sequelize.define('User', {
     allowNull: false,
     unique: true,
     validate: {
-      isEmail: true
+      isEmail: true,
+      notEmpty: true
     }
   },
   password: {
     type: DataTypes.STRING(255),
-    allowNull: false
+    allowNull: false,
+    validate: {
+      notEmpty: true,
+      len: [6, 255]
+    }
   },
   name: {
     type: DataTypes.STRING(100),
-    allowNull: false
+    allowNull: false,
+    validate: {
+      notEmpty: true
+    }
   },
   role: {
     type: DataTypes.ENUM('admin', 'user'),
+    allowNull: false,
     defaultValue: 'user'
   },
   is_active: {
     type: DataTypes.BOOLEAN,
+    allowNull: false,
     defaultValue: true
   },
   last_login: {
-    type: DataTypes.DATE
-  },
-  created_at: {
     type: DataTypes.DATE,
-    defaultValue: DataTypes.NOW
-  },
-  updated_at: {
-    type: DataTypes.DATE,
-    defaultValue: DataTypes.NOW
+    allowNull: true
   }
 }, {
   tableName: 'users',
@@ -63,7 +66,6 @@ const User = sequelize.define('User', {
   }
 });
 
-// Método para comparar contraseñas
 User.prototype.comparePassword = async function(candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
 };

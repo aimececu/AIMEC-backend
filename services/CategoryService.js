@@ -13,7 +13,7 @@ class CategoryService {
             as: 'subcategories',
             where: { is_active: true },
             required: false,
-            attributes: ['id', 'name', 'image']
+            attributes: ['id', 'name']
           }
         ],
         order: [
@@ -39,7 +39,7 @@ class CategoryService {
             as: 'subcategories',
             where: { is_active: true },
             required: false,
-            attributes: ['id', 'name', 'image', 'description']
+            attributes: ['id', 'name', 'description']
           },
           {
             model: Product,
@@ -144,7 +144,7 @@ class CategoryService {
           {
             model: Category,
             as: 'category',
-            attributes: ['id', 'name']
+            attributes: ['id', 'name', 'description', 'icon', 'color']
           }
         ],
         order: [['sort_order', 'ASC'], ['name', 'ASC']]
@@ -245,6 +245,22 @@ class CategoryService {
       };
     } catch (error) {
       throw new Error(`Error al obtener estadísticas de categorías: ${error.message}`);
+    }
+  }
+
+  // Obtener todas las marcas
+  async getAllBrands() {
+    try {
+      const { Brand } = require('../models');
+      
+      const brands = await Brand.findAll({
+        where: { is_active: true },
+        order: [['name', 'ASC']]
+      });
+
+      return brands;
+    } catch (error) {
+      throw new Error(`Error al obtener marcas: ${error.message}`);
     }
   }
 }

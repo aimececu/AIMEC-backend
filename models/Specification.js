@@ -1,7 +1,7 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
 
-const Feature = sequelize.define('Feature', {
+const Specification = sequelize.define('Specification', {
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
@@ -10,6 +10,7 @@ const Feature = sequelize.define('Feature', {
   name: {
     type: DataTypes.STRING(100),
     allowNull: false,
+    unique: true,
     validate: {
       notEmpty: true
     }
@@ -18,31 +19,26 @@ const Feature = sequelize.define('Feature', {
     type: DataTypes.TEXT,
     allowNull: true
   },
-  icon: {
-    type: DataTypes.STRING(100),
+  unit: {
+    type: DataTypes.STRING(20),
     allowNull: true
+  },
+  data_type: {
+    type: DataTypes.ENUM('text', 'number', 'boolean'),
+    allowNull: false,
+    defaultValue: 'text'
   },
   is_active: {
     type: DataTypes.BOOLEAN,
     allowNull: false,
     defaultValue: true
-  },
-  created_at: {
-    type: DataTypes.DATE,
-    allowNull: false,
-    defaultValue: DataTypes.NOW
-  },
-  updated_at: {
-    type: DataTypes.DATE,
-    allowNull: false,
-    defaultValue: DataTypes.NOW
   }
 }, {
-  tableName: 'features',
+  tableName: 'specifications',
   schema: 'aimec_products',
   timestamps: true,
   createdAt: 'created_at',
   updatedAt: 'updated_at'
 });
 
-module.exports = Feature; 
+module.exports = Specification;

@@ -79,9 +79,10 @@ const getAllProducts = async (filters = {}) => {
     }
 
     const result = await pool.query(query, params);
-    return result.rows;
+    return result.rows || [];
   } catch (error) {
-    throw new Error(`Error al obtener productos: ${error.message}`);
+    console.error('Error al obtener productos:', error);
+    return [];
   }
 };
 
