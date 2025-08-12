@@ -17,9 +17,8 @@ class CategoryService {
           }
         ],
         order: [
-          ['sort_order', 'ASC'],
           ['name', 'ASC'],
-          [{ model: Subcategory, as: 'subcategories' }, 'sort_order', 'ASC']
+          [{ model: Subcategory, as: 'subcategories' }, 'name', 'ASC']
         ]
       });
 
@@ -147,7 +146,7 @@ class CategoryService {
             attributes: ['id', 'name', 'description', 'icon', 'color']
           }
         ],
-        order: [['sort_order', 'ASC'], ['name', 'ASC']]
+        order: [['name', 'ASC']]
       });
 
       return subcategories;
@@ -261,6 +260,34 @@ class CategoryService {
       return brands;
     } catch (error) {
       throw new Error(`Error al obtener marcas: ${error.message}`);
+    }
+  }
+
+  // Obtener subcategorías por ID de categoría
+  async getSubcategoriesByCategoryId(categoryId) {
+    try {
+      const subcategories = await Subcategory.findAll({
+        where: {
+          category_id: categoryId,
+          is_active: true
+        },
+        order: [['name', 'ASC']]
+      });
+
+      return subcategories;
+    } catch (error) {
+      throw new Error(`Error al obtener subcategorías: ${error.message}`);
+    }
+  }
+
+  // Obtener solo el conteo de categorías
+  async getCategoryCount() {
+    try {
+      return await Category.count({
+        where: { is_active: true }
+      });
+    } catch (error) {
+      throw new Error(`Error al contar categorías: ${error.message}`);
     }
   }
 }

@@ -2,13 +2,11 @@
   "name": "aimec-backend",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon server.js",
-    "start": "node server.js",
-    "populate": "node scripts/populate-database.js",
-    "populate-db": "node scripts/run-populate.js"
+    "start": "node server.js"
   },
   "keywords": [],
   "author": "",
@@ -20,6 +18,7 @@
     "bcryptjs": "^3.0.2",
     "body-parser": "^2.2.0",
     "cors": "^2.8.5",
+    "csv-parser": "^3.2.0",
     "dotenv": "^16.3.1",
     "express": "^5.1.0",
     "express-rate-limit": "^7.1.5",

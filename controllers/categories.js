@@ -1,4 +1,5 @@
 const CategoryService = require('../services/CategoryService');
+const BrandService = require('../services/BrandService');
 
 // =====================================================
 // CONTROLADOR DE CATEGORÍAS
@@ -11,22 +12,18 @@ const getAllCategories = async (req, res, next) => {
     
     res.json({
       success: true,
-      data: categories || []
+      data: categories
     });
   } catch (error) {
-    console.error('Error al obtener categorías:', error);
-    // En caso de error, devolver array vacío en lugar de fallar
-    res.json({
-      success: true,
-      data: []
-    });
+    next(error);
   }
 };
 
 // Obtener categoría por ID
 const getCategoryById = async (req, res, next) => {
   try {
-    const category = await CategoryService.getCategoryById(parseInt(req.params.id));
+    const categoryId = parseInt(req.params.id);
+    const category = await CategoryService.getCategoryById(categoryId);
     
     if (!category) {
       return res.status(404).json({
@@ -48,15 +45,6 @@ const getCategoryById = async (req, res, next) => {
 const createCategory = async (req, res, next) => {
   try {
     const categoryData = req.body;
-    
-    // Validaciones básicas
-    if (!categoryData.name) {
-      return res.status(400).json({
-        success: false,
-        error: "Nombre es requerido"
-      });
-    }
-
     const category = await CategoryService.createCategory(categoryData);
     
     res.status(201).json({
@@ -74,7 +62,7 @@ const updateCategory = async (req, res, next) => {
   try {
     const categoryId = parseInt(req.params.id);
     const categoryData = req.body;
-
+    
     const category = await CategoryService.updateCategory(categoryId, categoryData);
     
     res.json({
@@ -91,12 +79,11 @@ const updateCategory = async (req, res, next) => {
 const deleteCategory = async (req, res, next) => {
   try {
     const categoryId = parseInt(req.params.id);
-    
-    const result = await CategoryService.deleteCategory(categoryId);
+    await CategoryService.deleteCategory(categoryId);
     
     res.json({
       success: true,
-      message: result.message
+      message: "Categoría eliminada correctamente"
     });
   } catch (error) {
     next(error);
@@ -107,11 +94,10 @@ const deleteCategory = async (req, res, next) => {
 // CONTROLADOR DE SUBCATEGORÍAS
 // =====================================================
 
-// Obtener subcategorías de una categoría
-const getSubcategoriesByCategory = async (req, res, next) => {
+// Obtener todas las subcategorías
+const getAllSubcategories = async (req, res, next) => {
   try {
-    const categoryId = parseInt(req.params.categoryId);
-    const subcategories = await CategoryService.getSubcategoriesByCategory(categoryId);
+    const subcategories = await CategoryService.getAllSubcategories();
     
     res.json({
       success: true,
@@ -122,19 +108,32 @@ const getSubcategoriesByCategory = async (req, res, next) => {
   }
 };
 
-// Crear subcategoría
-const createSubcategory = async (req, res, next) => {
+// Obtener subcategoría por ID
+const getSubcategoryById = async (req, res, next) => {
   try {
-    const subcategoryData = req.body;
+    const subcategoryId = parseInt(req.params.id);
+    const subcategory = await CategoryService.getSubcategoryById(subcategoryId);
     
-    // Validaciones básicas
-    if (!subcategoryData.name || !subcategoryData.category_id) {
-      return res.status(400).json({
+    if (!subcategory) {
+      return res.status(404).json({
         success: false,
-        error: "Nombre y categoría padre son requeridos"
+        error: "Subcategoría no encontrada"
       });
     }
 
+    res.json({
+      success: true,
+      data: subcategory
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Crear nueva subcategoría
+const createSubcategory = async (req, res, next) => {
+  try {
+    const subcategoryData = req.body;
     const subcategory = await CategoryService.createSubcategory(subcategoryData);
     
     res.status(201).json({
@@ -152,7 +151,7 @@ const updateSubcategory = async (req, res, next) => {
   try {
     const subcategoryId = parseInt(req.params.id);
     const subcategoryData = req.body;
-
+    
     const subcategory = await CategoryService.updateSubcategory(subcategoryId, subcategoryData);
     
     res.json({
@@ -169,12 +168,11 @@ const updateSubcategory = async (req, res, next) => {
 const deleteSubcategory = async (req, res, next) => {
   try {
     const subcategoryId = parseInt(req.params.id);
-    
-    const result = await CategoryService.deleteSubcategory(subcategoryId);
+    await CategoryService.deleteSubcategory(subcategoryId);
     
     res.json({
       success: true,
-      message: result.message
+      message: "Subcategoría eliminada correctamente"
     });
   } catch (error) {
     next(error);
@@ -188,39 +186,22 @@ const deleteSubcategory = async (req, res, next) => {
 // Obtener todas las marcas
 const getAllBrands = async (req, res, next) => {
   try {
-    const brands = await CategoryService.getAllBrands();
+    const brands = await BrandService.getAllBrands();
     
     res.json({
       success: true,
-      data: brands || []
+      data: brands
     });
   } catch (error) {
-    console.error('Error al obtener marcas:', error);
-    // En caso de error, devolver array vacío en lugar de fallar
-    res.json({
-      success: true,
-      data: []
-    });
+    next(error);
   }
 };
 
 // Obtener marca por ID
 const getBrandById = async (req, res, next) => {
   try {
-    const { Brand, Product } = require('../models');
-    
-    const brand = await Brand.findByPk(parseInt(req.params.id), {
-      include: [
-        {
-          model: Product,
-          as: 'products',
-          where: { is_active: true },
-          required: false,
-          attributes: ['id', 'name', 'sku', 'price', 'main_image'],
-          limit: 10
-        }
-      ]
-    });
+    const brandId = parseInt(req.params.id);
+    const brand = await BrandService.getBrandById(brandId);
     
     if (!brand) {
       return res.status(404).json({
@@ -241,18 +222,8 @@ const getBrandById = async (req, res, next) => {
 // Crear nueva marca
 const createBrand = async (req, res, next) => {
   try {
-    const { Brand } = require('../models');
     const brandData = req.body;
-    
-    // Validaciones básicas
-    if (!brandData.name) {
-      return res.status(400).json({
-        success: false,
-        error: "Nombre es requerido"
-      });
-    }
-
-    const brand = await Brand.create(brandData);
+    const brand = await BrandService.createBrand(brandData);
     
     res.status(201).json({
       success: true,
@@ -267,19 +238,10 @@ const createBrand = async (req, res, next) => {
 // Actualizar marca
 const updateBrand = async (req, res, next) => {
   try {
-    const { Brand } = require('../models');
     const brandId = parseInt(req.params.id);
     const brandData = req.body;
-
-    const brand = await Brand.findByPk(brandId);
-    if (!brand) {
-      return res.status(404).json({
-        success: false,
-        error: "Marca no encontrada"
-      });
-    }
-
-    await brand.update(brandData);
+    
+    const brand = await BrandService.updateBrand(brandId, brandData);
     
     res.json({
       success: true,
@@ -294,201 +256,12 @@ const updateBrand = async (req, res, next) => {
 // Eliminar marca
 const deleteBrand = async (req, res, next) => {
   try {
-    const { Brand, Product } = require('../models');
     const brandId = parseInt(req.params.id);
-
-    const brand = await Brand.findByPk(brandId);
-    if (!brand) {
-      return res.status(404).json({
-        success: false,
-        error: "Marca no encontrada"
-      });
-    }
-
-    // Verificar si tiene productos asociados
-    const productCount = await Product.count({
-      where: { brand_id: brandId, is_active: true }
-    });
-
-    if (productCount > 0) {
-      return res.status(400).json({
-        success: false,
-        error: "No se puede eliminar una marca que tiene productos asociados"
-      });
-    }
-
-    await brand.update({ is_active: false });
+    await BrandService.deleteBrand(brandId);
     
     res.json({
       success: true,
       message: "Marca eliminada correctamente"
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// =====================================================
-// CONTROLADOR DE SERIES
-// =====================================================
-
-// Obtener todas las series
-const getAllSeries = async (req, res, next) => {
-  try {
-    const { ProductSeries, Brand } = require('../models');
-    
-    const series = await ProductSeries.findAll({
-      where: { is_active: true },
-      include: [
-        {
-          model: Brand,
-          as: 'brand',
-          attributes: ['id', 'name']
-        }
-      ],
-      order: [['name', 'ASC']]
-    });
-    
-    res.json({
-      success: true,
-      data: series
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// Obtener serie por ID
-const getProductSeriesById = async (req, res, next) => {
-  try {
-    const { ProductSeries, Brand } = require('../models');
-    
-    const series = await ProductSeries.findByPk(parseInt(req.params.id), {
-      include: [
-        {
-          model: Brand,
-          as: 'brand',
-          attributes: ['id', 'name']
-        }
-      ]
-    });
-    
-    if (!series) {
-      return res.status(404).json({
-        success: false,
-        error: "Serie no encontrada"
-      });
-    }
-
-    res.json({
-      success: true,
-      data: series
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// Crear nueva serie
-const createProductSeries = async (req, res, next) => {
-  try {
-    const { ProductSeries } = require('../models');
-    const seriesData = req.body;
-    
-    // Validaciones básicas
-    if (!seriesData.name || !seriesData.brand_id) {
-      return res.status(400).json({
-        success: false,
-        error: "Nombre y marca son requeridos"
-      });
-    }
-
-    const series = await ProductSeries.create(seriesData);
-    
-    res.status(201).json({
-      success: true,
-      data: series,
-      message: "Serie creada correctamente"
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// Actualizar serie
-const updateProductSeries = async (req, res, next) => {
-  try {
-    const { ProductSeries } = require('../models');
-    const seriesId = parseInt(req.params.id);
-    const seriesData = req.body;
-
-    const series = await ProductSeries.findByPk(seriesId);
-    
-    if (!series) {
-      return res.status(404).json({
-        success: false,
-        error: "Serie no encontrada"
-      });
-    }
-
-    await series.update(seriesData);
-    
-    res.json({
-      success: true,
-      data: series,
-      message: "Serie actualizada correctamente"
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// Eliminar serie
-const deleteProductSeries = async (req, res, next) => {
-  try {
-    const { ProductSeries, Product } = require('../models');
-    const seriesId = parseInt(req.params.id);
-
-    const series = await ProductSeries.findByPk(seriesId);
-    
-    if (!series) {
-      return res.status(404).json({
-        success: false,
-        error: "Serie no encontrada"
-      });
-    }
-
-    // Verificar si tiene productos asociados
-    const productCount = await Product.count({
-      where: { series_id: seriesId, is_active: true }
-    });
-
-    if (productCount > 0) {
-      return res.status(400).json({
-        success: false,
-        error: "No se puede eliminar una serie que tiene productos asociados"
-      });
-    }
-
-    await series.update({ is_active: false });
-    
-    res.json({
-      success: true,
-      message: "Serie eliminada correctamente"
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// Obtener estadísticas
-const getCategoryStats = async (req, res, next) => {
-  try {
-    const stats = await CategoryService.getCategoryStats();
-    
-    res.json({
-      success: true,
-      data: stats
     });
   } catch (error) {
     next(error);
@@ -504,7 +277,8 @@ module.exports = {
   deleteCategory,
   
   // Subcategorías
-  getSubcategoriesByCategory,
+  getAllSubcategories,
+  getSubcategoryById,
   createSubcategory,
   updateSubcategory,
   deleteSubcategory,
@@ -514,15 +288,5 @@ module.exports = {
   getBrandById,
   createBrand,
   updateBrand,
-  deleteBrand,
-  
-  // Series
-  getAllSeries,
-  getProductSeriesById,
-  createProductSeries,
-  updateProductSeries,
-  deleteProductSeries,
-  
-  // Estadísticas
-  getCategoryStats
+  deleteBrand
 }; 

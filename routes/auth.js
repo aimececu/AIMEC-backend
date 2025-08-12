@@ -80,6 +80,9 @@ const registerSchema = {
  *         application/json:
  *           schema:
  *             $ref: '#/components/schemas/LoginRequest'
+ *           example:
+ *             email: "admin@aimec.com"
+ *             password: "admin123"
  *     responses:
  *       200:
  *         description: Login exitoso
@@ -272,6 +275,11 @@ router.post('/logout-all', authController.verifySession, authController.logoutAl
  *                 type: string
  *                 enum: [admin, user]
  *                 default: user
+ *           example:
+ *             email: "usuario@aimec.com"
+ *             password: "password123"
+ *             name: "Juan Pérez"
+ *             role: "user"
  *     responses:
  *       201:
  *         description: Usuario registrado exitosamente
@@ -326,6 +334,10 @@ router.get('/profile', authController.verifySession, authController.getProfile);
  *                 format: email
  *               password:
  *                 type: string
+ *           example:
+ *             name: "Juan Pérez Actualizado"
+ *             email: "juan.perez@aimec.com"
+ *             password: "nuevaPassword123"
  *     responses:
  *       200:
  *         description: Perfil actualizado exitosamente

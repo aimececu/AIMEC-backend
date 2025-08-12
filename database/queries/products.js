@@ -11,13 +11,11 @@ const getAllProducts = async (filters = {}) => {
         p.*,
         b.name as brand_name,
         c.name as category_name,
-        sc.name as subcategory_name,
-        ps.name as series_name
+        sc.name as subcategory_name
       FROM products p
       LEFT JOIN brands b ON p.brand_id = b.id
       LEFT JOIN categories c ON p.category_id = c.id
       LEFT JOIN subcategories sc ON p.subcategory_id = sc.id
-      LEFT JOIN product_series ps ON p.series_id = ps.id
       WHERE p.is_active = true
     `;
     
@@ -93,13 +91,11 @@ const getProductById = async (id) => {
         p.*,
         b.name as brand_name,
         c.name as category_name,
-        sc.name as subcategory_name,
-        ps.name as series_name
+        sc.name as subcategory_name
       FROM products p
       LEFT JOIN brands b ON p.brand_id = b.id
       LEFT JOIN categories c ON p.category_id = c.id
       LEFT JOIN subcategories sc ON p.subcategory_id = sc.id
-      LEFT JOIN product_series ps ON p.series_id = ps.id
       WHERE p.id = $1 AND p.is_active = true
     `, [id]);
     
@@ -116,13 +112,11 @@ const getProductBySlug = async (slug) => {
         p.*,
         b.name as brand_name,
         c.name as category_name,
-        sc.name as subcategory_name,
-        ps.name as series_name
+        sc.name as subcategory_name
       FROM products p
       LEFT JOIN brands b ON p.brand_id = b.id
       LEFT JOIN categories c ON p.category_id = c.id
       LEFT JOIN subcategories sc ON p.subcategory_id = sc.id
-      LEFT JOIN product_series ps ON p.series_id = ps.id
       WHERE p.slug = $1 AND p.is_active = true
     `, [slug]);
     
@@ -138,7 +132,7 @@ const createProduct = async (productData) => {
     await client.query('BEGIN');
 
     const {
-      sku, name, description, short_description, brand_id, category_id, subcategory_id, series_id,
+      sku, name, description, short_description, brand_id, category_id, subcategory_id,
       price, original_price, cost_price, stock_quantity, min_stock_level, weight, dimensions,
       warranty_months, lead_time_days, main_image, additional_images, is_featured,
       meta_title, meta_description, slug
@@ -146,14 +140,14 @@ const createProduct = async (productData) => {
 
     const result = await client.query(`
       INSERT INTO products (
-        sku, name, description, short_description, brand_id, category_id, subcategory_id, series_id,
+        sku, name, description, short_description, brand_id, category_id, subcategory_id,
         price, original_price, cost_price, stock_quantity, min_stock_level, weight, dimensions,
         warranty_months, lead_time_days, main_image, additional_images, is_featured,
         meta_title, meta_description, slug
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
       RETURNING *
     `, [
-      sku, name, description, short_description, brand_id, category_id, subcategory_id, series_id,
+      sku, name, description, short_description, brand_id, category_id, subcategory_id,
       price, original_price, cost_price, stock_quantity, min_stock_level, weight, dimensions,
       warranty_months, lead_time_days, main_image, additional_images, is_featured,
       meta_title, meta_description, slug
@@ -216,13 +210,11 @@ const searchProducts = async (searchTerm, filters = {}) => {
         b.name as brand_name,
         c.name as category_name,
         sc.name as subcategory_name,
-        ps.name as series_name,
         ts_rank(to_tsvector('spanish', p.name || ' ' || COALESCE(p.description, '')), plainto_tsquery('spanish', $1)) as rank
       FROM products p
       LEFT JOIN brands b ON p.brand_id = b.id
       LEFT JOIN categories c ON p.category_id = c.id
       LEFT JOIN subcategories sc ON p.subcategory_id = sc.id
-      LEFT JOIN product_series ps ON p.series_id = ps.id
       WHERE p.is_active = true
         AND (to_tsvector('spanish', p.name || ' ' || COALESCE(p.description, '')) @@ plainto_tsquery('spanish', $1)
              OR p.sku ILIKE $2
@@ -266,13 +258,11 @@ const getFeaturedProducts = async (limit = 10) => {
         p.*,
         b.name as brand_name,
         c.name as category_name,
-        sc.name as subcategory_name,
-        ps.name as series_name
+        sc.name as subcategory_name
       FROM products p
       LEFT JOIN brands b ON p.brand_id = b.id
       LEFT JOIN categories c ON p.category_id = c.id
       LEFT JOIN subcategories sc ON p.subcategory_id = sc.id
-      LEFT JOIN product_series ps ON p.series_id = ps.id
       WHERE p.is_active = true AND p.is_featured = true
       ORDER BY p.created_at DESC
       LIMIT $1
@@ -291,13 +281,11 @@ const getProductsByCategory = async (categoryId, limit = 20) => {
         p.*,
         b.name as brand_name,
         c.name as category_name,
-        sc.name as subcategory_name,
-        ps.name as series_name
+        sc.name as subcategory_name
       FROM products p
       LEFT JOIN brands b ON p.brand_id = b.id
       LEFT JOIN categories c ON p.category_id = c.id
       LEFT JOIN subcategories sc ON p.subcategory_id = sc.id
-      LEFT JOIN product_series ps ON p.series_id = ps.id
       WHERE p.is_active = true AND p.category_id = $1
       ORDER BY p.created_at DESC
       LIMIT $2
@@ -342,13 +330,11 @@ const getProductsByBrand = async (brandId) => {
         p.*,
         b.name as brand_name,
         c.name as category_name,
-        sc.name as subcategory_name,
-        ps.name as series_name
+        sc.name as subcategory_name
       FROM products p
       LEFT JOIN brands b ON p.brand_id = b.id
       LEFT JOIN categories c ON p.category_id = c.id
       LEFT JOIN subcategories sc ON p.subcategory_id = sc.id
-      LEFT JOIN product_series ps ON p.series_id = ps.id
       WHERE p.is_active = true AND p.brand_id = $1
       ORDER BY p.created_at DESC
     `, [brandId]);

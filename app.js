@@ -7,17 +7,13 @@ const setupMiddlewares = require('./config/middlewares');
 const setupSwaggerUI = require('./config/swagger-ui');
 const logger = require('./config/logger');
 
-// Importar configuraciones adicionales
-const { authenticateToken } = require('./config/jwt');
-const { validateInput } = require('./config/validation');
-
 // Importar rutas
 const productRoutes = require('./routes/products');
 const categoryRoutes = require('./routes/categories');
-const specificationRoutes = require('./routes/specifications');
+const brandRoutes = require('./routes/brands');
 const authRoutes = require('./routes/auth');
-
-
+const infoRoutes = require('./routes/info');
+const importRoutes = require('./routes/import');
 const fileRoutes = require('./routes/files');
 
 const app = express();
@@ -27,8 +23,6 @@ const app = express();
 // =====================================================
 
 setupMiddlewares(app);
-
-// Removido middleware CORS adicional que causaba conflictos
 
 // =====================================================
 // MIDDLEWARE DE BASE DE DATOS
@@ -41,13 +35,13 @@ app.use(async (req, res, next) => {
       // Probar conexión
       await testConnection();
       
-                        // Sincronizar base de datos automáticamente
-                  const { syncDatabase } = require('./config/database');
-                  await syncDatabase();
-                  
-                  // Crear usuario administrador por defecto
-                  const { createAdminUser } = require('./scripts/create-admin-user');
-                  await createAdminUser();
+      // Sincronizar base de datos automáticamente
+      const { syncDatabase } = require('./config/database');
+      await syncDatabase();
+      
+      // Crear usuario administrador por defecto
+      const { createAdminUser } = require('./scripts/create-admin-user');
+      await createAdminUser();
       
       req.app.locals.dbInitialized = true;
       logger.databaseConnected();
@@ -72,37 +66,7 @@ logger.swaggerGenerated(specs);
 // RUTAS PRINCIPALES
 // =====================================================
 
-// Rutas de archivos (AWS S3)
-app.use('/api/files', fileRoutes);
-
-/**
- * @swagger
- * /health:
- *   get:
- *     summary: Verificar el estado del servidor
- *     description: Endpoint para verificar si el servidor está funcionando correctamente
- *     tags: [Sistema]
- *     responses:
- *       200:
- *         description: Servidor funcionando correctamente
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 status:
- *                   type: string
- *                 database:
- *                   type: string
- *                 timestamp:
- *                   type: string
- *                 version:
- *                   type: string
- *       500:
- *         description: Error del servidor
- */
+// Endpoint de salud del sistema
 app.get("/health", async (req, res) => {
   try {
     const isConnected = await testConnection();
@@ -111,7 +75,12 @@ app.get("/health", async (req, res) => {
       status: "OK", 
       database: isConnected ? "Connected" : "Disconnected",
       timestamp: new Date().toISOString(),
-      version: "1.0.0"
+      version: "1.0.0",
+      server: {
+        port: config.port,
+        environment: config.nodeEnv,
+        host: req.get('host') || 'localhost'
+      }
     });
   } catch (error) {
     res.status(500).json({ 
@@ -123,55 +92,28 @@ app.get("/health", async (req, res) => {
   }
 });
 
-/**
- * @swagger
- * /:
- *   get:
- *     summary: Información de la API
- *     description: Endpoint principal que muestra información sobre la API
- *     tags: [Sistema]
- *     responses:
- *       200:
- *         description: Información de la API
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
- *                   type: string
- *                 version:
- *                   type: string
- *                 endpoints:
- *                   type: object
- */
+// Endpoint principal de información
 app.get("/", (req, res) => {
   res.json({
     success: true,
     message: "API AIMEC - Sistema de Gestión de Productos Industriales",
     version: "1.0.0",
+    server: {
+      port: config.port,
+      environment: config.nodeEnv,
+      host: req.get('host') || 'localhost'
+    },
     endpoints: {
-              health: "/health",
-        apiDocs: "/api-docs",
-        products: "/api/products",
-        categories: "/api/categories",
-        specifications: "/api/specifications",
-        
-        auth: "/api/auth"
+      health: "/health",
+      apiDocs: "/api-docs",
+      products: "/api/products",
+      categories: "/api/categories",
+      brands: "/api/brands",
+      info: "/api/info",
+      import: "/api/import",
+      auth: "/api/auth",
+      files: "/api/files"
     }
-  });
-});
-
-// Endpoint de prueba CORS
-app.get("/test-cors", (req, res) => {
-  res.json({
-    success: true,
-    message: "CORS test successful",
-    timestamp: new Date().toISOString(),
-    origin: req.headers.origin,
-    method: req.method
   });
 });
 
@@ -179,19 +121,26 @@ app.get("/test-cors", (req, res) => {
 // RUTAS DE LA API
 // =====================================================
 
+// Rutas de archivos (AWS S3)
+app.use('/api/files', fileRoutes);
+
 // Rutas de productos
 app.use("/api/products", productRoutes);
 
 // Rutas de categorías
 app.use("/api/categories", categoryRoutes);
 
-// Rutas de especificaciones
-app.use("/api/specifications", specificationRoutes);
+// Rutas de marcas
+app.use("/api/brands", brandRoutes);
+
+// Rutas de información del sistema
+app.use("/api/info", infoRoutes);
+
+// Rutas de importación
+app.use("/api/import", importRoutes);
 
 // Rutas de autenticación
 app.use("/api/auth", authRoutes);
-
-
 
 // =====================================================
 // MIDDLEWARE DE MANEJO DE ERRORES
@@ -243,25 +192,68 @@ const errorHandler = (err, req, res, next) => {
 
 app.use(errorHandler);
 
-// Middleware para rutas no encontradas (más específico para evitar conflictos con Swagger)
+// Middleware para rutas no encontradas
 app.use((req, res) => {
-  if (!req.path.startsWith('/api-docs')) {
-    res.status(404).json({
-      success: false,
-      error: "Ruta no encontrada",
-      message: `La ruta ${req.originalUrl} no existe`,
-      availableEndpoints: {
-        health: "/health",
-        apiDocs: "/api-docs",
-        products: "/api/products",
-        categories: "/api/categories",
-        specifications: "/api/specifications"
-      }
-    });
-  } else {
-    res.status(404).send('Endpoint de documentación no encontrado');
-  }
+  res.status(404).json({
+    success: false,
+    error: "Ruta no encontrada",
+    message: `La ruta ${req.originalUrl} no existe`,
+    availableEndpoints: {
+      health: "/health",
+      apiDocs: "/api-docs",
+      products: "/api/products",
+      categories: "/api/categories",
+      brands: "/api/brands",
+      info: "/api/info",
+      import: "/api/import",
+      auth: "/api/auth",
+      files: "/api/files"
+    }
+  });
 });
+
+// =====================================================
+// INICIAR SERVIDOR
 // =====================================================
 
-module.exports = app;
+const startServer = () => {
+  const server = app.listen(config.port, () => {
+    const host = server.address().address;
+    const port = server.address().port;
+    
+    console.log('\n🚀 Servidor AIMEC Backend iniciado exitosamente!');
+    console.log('================================================');
+    console.log(`📍 Puerto: ${port}`);
+    console.log(`🌐 IP: ${host === '::' ? 'localhost' : host}`);
+    console.log(`🔗 URL Local: http://localhost:${port}`);
+    console.log(`🔗 URL Red: http://${host === '::' ? 'localhost' : host}:${port}`);
+    console.log(`📚 API Docs: http://localhost:${port}/api-docs`);
+    console.log(`🏥 Health Check: http://localhost:${port}/health`);
+    console.log('================================================\n');
+  });
+
+  // Manejo de errores del servidor
+  server.on('error', (error) => {
+    if (error.code === 'EADDRINUSE') {
+      console.error(`❌ Error: El puerto ${config.port} ya está en uso`);
+      console.error('💡 Solución: Cambia el puerto en .env o detén el proceso que lo usa');
+    } else {
+      console.error('❌ Error al iniciar el servidor:', error);
+    }
+    process.exit(1);
+  });
+
+  // Manejo de cierre graceful
+  process.on('SIGTERM', () => {
+    console.log('\n🔄 Cerrando servidor...');
+    server.close(() => {
+      console.log('✅ Servidor cerrado exitosamente');
+      process.exit(0);
+    });
+  });
+
+  return server;
+};
+
+// Exportar tanto la app como la función de inicio
+module.exports = { app, startServer };

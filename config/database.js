@@ -150,7 +150,7 @@ const smartSync = async () => {
 // Función para crear datos de ejemplo
 const createSampleData = async () => {
   try {
-    const { Brand, Category, Subcategory, Product, SpecificationType } = require('../models');
+    const { Brand, Category, Subcategory, Product } = require('../models');
     
     // Verificar si ya existen datos
     const existingBrands = await Brand.count();
@@ -170,25 +170,17 @@ const createSampleData = async () => {
     
     // Crear categorías de ejemplo
     const categories = await Category.bulkCreate([
-      { name: 'Automatización', description: 'Sistemas de automatización industrial', icon: '⚙️', color: '#3B82F6', sort_order: 1 },
-      { name: 'Control', description: 'Sistemas de control y monitoreo', icon: '🎛️', color: '#10B981', sort_order: 2 },
-      { name: 'Energía', description: 'Soluciones de energía y distribución', icon: '⚡', color: '#F59E0B', sort_order: 3 }
+      { name: 'Automatización', description: 'Sistemas de automatización industrial', icon: '⚙️', color: '#3B82F6' },
+      { name: 'Control', description: 'Sistemas de control y monitoreo', icon: '🎛️', color: '#10B981' },
+      { name: 'Energía', description: 'Soluciones de energía y distribución', icon: '⚡', color: '#F59E0B' }
     ]);
     
     // Crear subcategorías de ejemplo
     await Subcategory.bulkCreate([
-      { name: 'PLC', description: 'Controladores lógicos programables', category_id: categories[0].id, sort_order: 1 },
-      { name: 'HMI', description: 'Interfaces hombre-máquina', category_id: categories[0].id, sort_order: 2 },
-      { name: 'Sensores', description: 'Sensores industriales', category_id: categories[1].id, sort_order: 1 },
-      { name: 'Actuadores', description: 'Actuadores y válvulas', category_id: categories[1].id, sort_order: 2 }
-    ]);
-    
-    // Crear tipos de especificaciones de ejemplo
-    await SpecificationType.bulkCreate([
-      { name: 'voltage', display_name: 'Voltaje', data_type: 'number', unit: 'V', category_id: categories[2].id },
-      { name: 'current', display_name: 'Corriente', data_type: 'number', unit: 'A', category_id: categories[2].id },
-      { name: 'power', display_name: 'Potencia', data_type: 'number', unit: 'kW', category_id: categories[2].id },
-      { name: 'temperature', display_name: 'Temperatura', data_type: 'number', unit: '°C', category_id: categories[1].id }
+      { name: 'PLC', description: 'Controladores lógicos programables', category_id: categories[0].id },
+      { name: 'HMI', description: 'Interfaces hombre-máquina', category_id: categories[0].id },
+      { name: 'Sensores', description: 'Sensores industriales', category_id: categories[1].id },
+      { name: 'Actuadores', description: 'Actuadores y válvulas', category_id: categories[1].id }
     ]);
     
     // Crear productos de ejemplo
@@ -198,24 +190,20 @@ const createSampleData = async () => {
         name: 'PLC SIMATIC S7-1200',
         description: 'Controlador lógico programable compacto',
         price: 250.00,
-        original_price: 300.00,
         stock_quantity: 50,
         brand_id: brands[0].id,
         category_id: categories[0].id,
-        main_image: 'https://example.com/s7-1200.jpg',
-        is_featured: true
+        main_image: 'https://example.com/s7-1200.jpg'
       },
       {
         sku: 'TOUCH-PANEL-KTP',
         name: 'Panel Táctil KTP',
         description: 'Panel táctil para operación HMI',
         price: 450.00,
-        original_price: 500.00,
         stock_quantity: 25,
         brand_id: brands[0].id,
         category_id: categories[0].id,
-        main_image: 'https://example.com/ktp.jpg',
-        is_featured: true
+        main_image: 'https://example.com/ktp.jpg'
       }
     ]);
     

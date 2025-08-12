@@ -170,13 +170,16 @@ const getProductsByBrand = async (req, res, next) => {
 // Obtener estadísticas de productos
 const getProductStats = async (req, res, next) => {
   try {
+    console.log('Obteniendo estadísticas de productos...');
     const stats = await ProductService.getProductStats();
+    console.log('Estadísticas obtenidas:', stats);
     
     res.json({
       success: true,
       data: stats
     });
   } catch (error) {
+    console.error('Error obteniendo estadísticas:', error);
     next(error);
   }
 };

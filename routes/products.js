@@ -202,6 +202,20 @@ router.get('/:id', productController.getProductById);
  *         application/json:
  *           schema:
  *             $ref: '#/components/schemas/ProductInput'
+ *           example:
+ *             sku: "SIEMENS-3RT1015-1BB41"
+ *             name: "Contacto auxiliar 3RT1015-1BB41"
+ *             description: "Contacto auxiliar normalmente abierto para contactores Siemens, 1 contacto NO, 230V AC"
+ *             brand_id: 1
+ *             category_id: 1
+ *             subcategory_id: 1
+ *             price: 25.50
+ *             stock_quantity: 100
+ *             min_stock_level: 10
+ *             weight: 0.5
+ *             dimensions: "50x30x20"
+ *             main_image: "https://example.com/siemens-contact.jpg"
+ *             is_active: true
  *     responses:
  *       201:
  *         description: Producto creado exitosamente

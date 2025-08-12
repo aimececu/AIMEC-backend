@@ -310,31 +310,44 @@ class ProductService {
   // Obtener estadísticas de productos
   async getProductStats() {
     try {
+      console.log('Contando productos...');
       const totalProducts = await Product.count({
         where: { is_active: true }
       });
+      console.log('Total productos:', totalProducts);
 
-      const lowStockProducts = await Product.count({
-        where: {
-          is_active: true,
-          stock_quantity: { [Op.lte]: { [Op.col]: 'min_stock_level' } }
-        }
+      const totalBrands = await Brand.count({
+        where: { is_active: true }
       });
+      console.log('Total marcas:', totalBrands);
 
-      const outOfStockProducts = await Product.count({
-        where: {
-          is_active: true,
-          stock_quantity: 0
-        }
+      const totalCategories = await Category.count({
+        where: { is_active: true }
       });
+      console.log('Total categorías:', totalCategories);
 
-      return {
-        total: totalProducts,
-        lowStock: lowStockProducts,
-        outOfStock: outOfStockProducts
+      const result = {
+        total_products: totalProducts,
+        total_brands: totalBrands,
+        total_categories: totalCategories
       };
+      
+      console.log('Resultado final:', result);
+      return result;
     } catch (error) {
+      console.error('Error en getProductStats:', error);
       throw new Error(`Error al obtener estadísticas: ${error.message}`);
+    }
+  }
+
+  // Obtener solo el conteo de productos
+  async getProductCount() {
+    try {
+      return await Product.count({
+        where: { is_active: true }
+      });
+    } catch (error) {
+      throw new Error(`Error al contar productos: ${error.message}`);
     }
   }
 }

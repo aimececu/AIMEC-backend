@@ -3,7 +3,7 @@ const router = express.Router();
 const categoryController = require('../controllers/categories');
 
 // =====================================================
-// RUTAS DE CATEGORÍAS
+// RUTAS DE MARCAS
 // =====================================================
 
 /**
@@ -34,19 +34,19 @@ const categoryController = require('../controllers/categories');
 router.get('/', categoryController.getAllCategories);
 
 // =====================================================
-// RUTAS DE MARCAS
+// RUTAS DE SUBCATEGORÍAS
 // =====================================================
 
 /**
  * @swagger
- * /api/categories/brands:
+ * /api/categories/subcategories:
  *   get:
- *     summary: Obtener todas las marcas
- *     description: Retorna una lista de todas las marcas disponibles
- *     tags: [Marcas]
+ *     summary: Obtener todas las subcategorías
+ *     description: Retorna una lista de todas las subcategorías disponibles
+ *     tags: [Subcategorías]
  *     responses:
  *       200:
- *         description: Lista de marcas
+ *         description: Lista de subcategorías
  *         content:
  *           application/json:
  *             schema:
@@ -57,70 +57,20 @@ router.get('/', categoryController.getAllCategories);
  *                 data:
  *                   type: array
  *                   items:
- *                     type: object
- *                     properties:
- *                       id:
- *                         type: integer
- *                       name:
- *                         type: string
- *                       description:
- *                         type: string
- *                       is_active:
- *                         type: boolean
+ *                     $ref: '#/components/schemas/Subcategory'
  *                 count:
  *                   type: integer
  */
-// Obtener todas las marcas
-router.get('/brands', categoryController.getAllBrands);
+// Obtener todas las subcategorías
+router.get('/subcategories', categoryController.getAllSubcategories);
 
 /**
  * @swagger
- * /api/categories/brands/{id}:
- *   get:
- *     summary: Obtener marca por ID
- *     description: Retorna una marca específica por su ID
- *     tags: [Marcas]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *         description: ID de la marca
- *     responses:
- *       200:
- *         description: Marca encontrada
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   type: object
- *                   properties:
- *                     id:
- *                       type: integer
- *                     name:
- *                       type: string
- *                     description:
- *                       type: string
- *                     is_active:
- *                       type: boolean
- *       404:
- *         description: Marca no encontrada
- */
-// Obtener marca por ID
-router.get('/brands/:id', categoryController.getBrandById);
-
-/**
- * @swagger
- * /api/categories/brands:
+ * /api/categories/subcategories:
  *   post:
- *     summary: Crear nueva marca
- *     description: Crea una nueva marca en el sistema
- *     tags: [Marcas]
+ *     summary: Crear nueva subcategoría
+ *     description: Crea una nueva subcategoría en el sistema
+ *     tags: [Subcategorías]
  *     requestBody:
  *       required: true
  *       content:
@@ -129,22 +79,28 @@ router.get('/brands/:id', categoryController.getBrandById);
  *             type: object
  *             required:
  *               - name
+ *               - category_id
  *             properties:
  *               name:
  *                 type: string
- *                 description: Nombre de la marca
+ *                 description: Nombre de la subcategoría
  *               description:
  *                 type: string
- *                 description: Descripción de la marca
- *               logo_url:
- *                 type: string
- *                 description: URL del logo de la marca
- *               website:
- *                 type: string
- *                 description: Sitio web de la marca
+ *                 description: Descripción de la subcategoría
+ *               category_id:
+ *                 type: integer
+ *                 description: ID de la categoría padre
+ *               is_active:
+ *                 type: boolean
+ *                 description: Estado activo de la subcategoría
+ *           example:
+ *             name: "Contactores de potencia"
+ *             description: "Contactores de alta potencia para motores industriales"
+ *             category_id: 1
+ *             is_active: true
  *     responses:
  *       201:
- *         description: Marca creada exitosamente
+ *         description: Subcategoría creada exitosamente
  *         content:
  *           application/json:
  *             schema:
@@ -155,81 +111,24 @@ router.get('/brands/:id', categoryController.getBrandById);
  *                 message:
  *                   type: string
  *                 data:
- *                   type: object
+ *                   $ref: '#/components/schemas/Subcategory'
  *       400:
  *         description: Datos inválidos
  */
-// Crear nueva marca
-router.post('/brands', categoryController.createBrand);
+// Crear nueva subcategoría
+router.post('/subcategories', categoryController.createSubcategory);
 
-// Actualizar marca
-router.put('/brands/:id', categoryController.updateBrand);
+// Obtener subcategoría por ID
+router.get('/subcategories/:id', categoryController.getSubcategoryById);
 
-// Eliminar marca
-router.delete('/brands/:id', categoryController.deleteBrand);
+// Actualizar subcategoría
+router.put('/subcategories/:id', categoryController.updateSubcategory);
 
-// =====================================================
-// RUTAS DE SERIES
-// =====================================================
-
-/**
- * @swagger
- * /api/categories/series:
- *   get:
- *     summary: Obtener todas las series
- *     description: Retorna una lista de todas las series de productos disponibles
- *     tags: [Series]
- *     responses:
- *       200:
- *         description: Lista de series
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       id:
- *                         type: integer
- *                       name:
- *                         type: string
- *                       description:
- *                         type: string
- *                       brand_id:
- *                         type: integer
- *                       category_id:
- *                         type: integer
- *                       is_active:
- *                         type: boolean
- *                 count:
- *                   type: integer
- */
-// Obtener todas las series
-router.get('/series', categoryController.getAllSeries);
-
-// Obtener serie por ID
-router.get('/series/:id', categoryController.getProductSeriesById);
-
-// Crear nueva serie
-router.post('/series', categoryController.createProductSeries);
-
-// Actualizar serie
-router.put('/series/:id', categoryController.updateProductSeries);
-
-// Eliminar serie
-router.delete('/series/:id', categoryController.deleteProductSeries);
-
-// =====================================================
-// RUTAS DE SUBCATEGORÍAS
-// =====================================================
+// Eliminar subcategoría
+router.delete('/subcategories/:id', categoryController.deleteSubcategory);
 
 // Obtener subcategorías de una categoría
-router.get('/:categoryId/subcategories', categoryController.getSubcategoriesByCategory);
+router.get('/:categoryId/subcategories', categoryController.getAllSubcategories);
 
 // =====================================================
 // RUTAS DE CATEGORÍAS (deben ir al final para evitar conflictos)
@@ -295,9 +194,11 @@ router.get('/:id', categoryController.getCategoryById);
  *               color:
  *                 type: string
  *                 description: Color de la categoría (hex)
- *               sort_order:
- *                 type: integer
- *                 description: Orden de clasificación
+ *           example:
+ *             name: "Contactores"
+ *             description: "Dispositivos electromagnéticos para control de motores"
+ *             icon: "fas fa-plug"
+ *             color: "#3B82F6"
  *     responses:
  *       201:
  *         description: Categoría creada exitosamente

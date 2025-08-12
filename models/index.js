@@ -5,7 +5,6 @@ const User = require('./User');
 const Brand = require('./Brand');
 const Category = require('./Category');
 const Subcategory = require('./Subcategory');
-const Specification = require('./Specification');
 const Product = require('./Product');
 const Session = require('./Session');
 
@@ -37,7 +36,6 @@ module.exports = {
   Brand,
   Category,
   Subcategory,
-  Specification,
   Product,
   Session
 }; 
