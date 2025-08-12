@@ -10,6 +10,7 @@ const logger = require('./config/logger');
 // Importar rutas
 const productRoutes = require('./routes/products');
 const categoryRoutes = require('./routes/categories');
+const subcategoryRoutes = require('./routes/subcategories');
 const brandRoutes = require('./routes/brands');
 const authRoutes = require('./routes/auth');
 const infoRoutes = require('./routes/info');
@@ -129,6 +130,9 @@ app.use("/api/products", productRoutes);
 
 // Rutas de categorías
 app.use("/api/categories", categoryRoutes);
+
+// Rutas de subcategorías
+app.use("/api/subcategories", subcategoryRoutes);
 
 // Rutas de marcas
 app.use("/api/brands", brandRoutes);
