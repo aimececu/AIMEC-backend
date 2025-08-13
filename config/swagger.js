@@ -184,7 +184,57 @@ const swaggerOptions = {
             created_at: { type: "string", format: "date-time", example: "2024-01-15T10:30:00Z" },
             updated_at: { type: "string", format: "date-time", example: "2024-01-15T10:30:00Z" }
           }
-        }
+        },
+        Accessory: {
+          type: "object",
+          properties: {
+            id: { type: "integer", example: 1 },
+            main_product_id: { type: "integer", example: 1, description: "ID del producto principal" },
+            accessory_product_id: { type: "integer", example: 5, description: "ID del producto accesorio" },
+            created_at: { type: "string", format: "date-time", example: "2024-01-15T10:30:00Z" },
+            updated_at: { type: "string", format: "date-time", example: "2024-01-15T10:30:00Z" }
+          }
+        },
+        AccessoryProduct: {
+          type: "object",
+          properties: {
+            id: { type: "integer", example: 5 },
+            sku: { type: "string", example: "CAB-001" },
+            name: { type: "string", example: "Cable de Alimentación" },
+            description: { type: "string", example: "Cable de alimentación compatible" },
+            short_description: { type: "string", example: "Cable industrial 3x2.5mm" },
+            price: { type: "number", example: 25.50 },
+            original_price: { type: "number", example: 30.00 },
+            main_image: { type: "string", example: "https://example.com/cable.jpg" },
+            additional_images: { type: "array", items: { type: "string" }, example: ["https://example.com/cable-detail.jpg"] },
+            is_active: { type: "boolean", example: true },
+            stock_quantity: { type: "integer", example: 50 },
+            brand: {
+              type: "object",
+              properties: {
+                id: { type: "integer", example: 2 },
+                name: { type: "string", example: "CableTech" },
+                logo_url: { type: "string", example: "https://example.com/cabletech-logo.png" }
+              }
+            },
+            category: {
+              type: "object",
+              properties: {
+                id: { type: "integer", example: 3 },
+                name: { type: "string", example: "Cables" },
+                color: { type: "string", example: "#FF6B6B" }
+              }
+            },
+            subcategory: {
+              type: "object",
+              properties: {
+                id: { type: "integer", example: 2 },
+                name: { type: "string", example: "Cables de Alimentación" }
+              }
+            }
+          }
+        },
+      
       },
       securitySchemes: {
         bearerAuth: {
@@ -220,6 +270,10 @@ const swaggerOptions = {
       {
         name: "Marcas",
         description: "Gestión de marcas"
+      },
+      {
+        name: "Accesorios",
+        description: "Gestión de relaciones entre productos principales y accesorios"
       }
     ]
   },

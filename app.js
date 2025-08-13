@@ -18,6 +18,7 @@ const importRoutes = require('./routes/import');
 const fileRoutes = require('./routes/files');
 const productFeaturesRoutes = require('./routes/productFeatures');
 const productApplicationsRoutes = require('./routes/productApplications');
+const accessoryRoutes = require('./routes/accessories');
 
 const app = express();
 
@@ -138,6 +139,9 @@ app.use("/api/productFeatures", productFeaturesRoutes);
 // Rutas de aplicaciones de productos
 app.use("/api/productApplications", productApplicationsRoutes);
 
+// Rutas de accesorios
+app.use("/api/accessories", accessoryRoutes);
+
 // Rutas de categorías
 app.use("/api/categories", categoryRoutes);
 
@@ -212,19 +216,20 @@ app.use((req, res) => {
     success: false,
     error: "Ruta no encontrada",
     message: `La ruta ${req.originalUrl} no existe`,
-    availableEndpoints: {
-      health: "/health",
-      apiDocs: "/api-docs",
-      products: "/api/products",
-      productFeatures: "/api/productFeatures",
-      productApplications: "/api/productApplications",
-      categories: "/api/categories",
-      brands: "/api/brands",
-      info: "/api/info",
-      import: "/api/import",
-      auth: "/api/auth",
-      files: "/api/files"
-    }
+          availableEndpoints: {
+        health: "/health",
+        apiDocs: "/api-docs",
+        products: "/api/products",
+        productFeatures: "/api/productFeatures",
+        productApplications: "/api/productApplications",
+        accessories: "/api/accessories",
+        categories: "/api/categories",
+        brands: "/api/brands",
+        info: "/api/info",
+        import: "/api/import",
+        auth: "/api/auth",
+        files: "/api/files"
+      }
   });
 });
 
