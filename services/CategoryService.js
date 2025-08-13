@@ -1,4 +1,4 @@
-const { Category, Subcategory, Product } = require('../models');
+const { Category, Subcategory, Product, Brand } = require('../models');
 const { Op } = require('sequelize');
 
 class CategoryService {
@@ -247,10 +247,31 @@ class CategoryService {
     }
   }
 
+  // Obtener todas las subcategorías
+  async getAllSubcategories() {
+    try {
+      const subcategories = await Subcategory.findAll({
+        where: { is_active: true },
+        include: [
+          {
+            model: Category,
+            as: 'category',
+            attributes: ['id', 'name', 'description']
+          }
+        ],
+        order: [['name', 'ASC']]
+      });
+
+      return subcategories;
+    } catch (error) {
+      throw new Error(`Error al obtener subcategorías: ${error.message}`);
+    }
+  }
+
   // Obtener todas las marcas
   async getAllBrands() {
     try {
-      const { Brand } = require('../models');
+      // Brand ya está importado al inicio del archivo
       
       const brands = await Brand.findAll({
         where: { is_active: true },
@@ -277,6 +298,29 @@ class CategoryService {
       return subcategories;
     } catch (error) {
       throw new Error(`Error al obtener subcategorías: ${error.message}`);
+    }
+  }
+
+  // Obtener subcategoría por ID
+  async getSubcategoryById(id) {
+    try {
+      const subcategory = await Subcategory.findByPk(id, {
+        include: [
+          {
+            model: Category,
+            as: 'category',
+            attributes: ['id', 'name', 'description']
+          }
+        ]
+      });
+
+      if (!subcategory) {
+        return null;
+      }
+
+      return subcategory;
+    } catch (error) {
+      throw new Error(`Error al obtener subcategoría: ${error.message}`);
     }
   }
 
