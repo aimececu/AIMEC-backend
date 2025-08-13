@@ -1,4 +1,4 @@
-const { Product, Brand, Category, Subcategory } = require('../models');
+const { Product, Brand, Category, Subcategory, ProductFeature, ProductApplication } = require('../models');
 const { Op } = require('sequelize');
 
 class ProductService {
@@ -73,8 +73,57 @@ class ProductService {
       }
 
       const products = await Product.findAndCountAll(options);
+      
+      // Obtener counts de características y aplicaciones para cada producto
+      const productIds = products.rows.map(p => p.id);
+      
+      if (productIds.length > 0) {
+        const [featuresCounts, applicationsCounts] = await Promise.all([
+          ProductFeature.findAll({
+            attributes: [
+              'product_id',
+              [ProductFeature.sequelize.fn('COUNT', ProductFeature.sequelize.col('id')), 'count']
+            ],
+            where: { product_id: { [Op.in]: productIds } },
+            group: ['product_id'],
+            raw: true
+          }),
+          ProductApplication.findAll({
+            attributes: [
+              'product_id',
+              [ProductApplication.sequelize.fn('COUNT', ProductApplication.sequelize.col('id')), 'count']
+            ],
+            where: { product_id: { [Op.in]: productIds } },
+            group: ['product_id'],
+            raw: true
+          })
+        ]);
+
+        // Crear mapas para acceso rápido
+        const featuresMap = new Map(featuresCounts.map(f => [f.product_id, parseInt(f.count)]));
+        const applicationsMap = new Map(applicationsCounts.map(a => [a.product_id, parseInt(a.count)]));
+
+        // Agregar counts a cada producto
+        const productsWithCounts = products.rows.map(product => ({
+          ...product.toJSON(),
+          features_count: featuresMap.get(product.id) || 0,
+          applications_count: applicationsMap.get(product.id) || 0
+        }));
+
+        return {
+          products: productsWithCounts,
+          total: products.count,
+          limit: filters.limit || null,
+          offset: filters.offset || 0
+        };
+      }
+      
       return {
-        products: products.rows,
+        products: products.rows.map(p => ({
+          ...p.toJSON(),
+          features_count: 0,
+          applications_count: 0
+        })),
         total: products.count,
         limit: filters.limit || null,
         offset: filters.offset || 0
@@ -116,7 +165,18 @@ class ProductService {
         throw new Error('Producto no encontrado');
       }
 
-      return product;
+      // Obtener counts de características y aplicaciones
+      const [featuresCount, applicationsCount] = await Promise.all([
+        ProductFeature.count({ where: { product_id: product.id } }),
+        ProductApplication.count({ where: { product_id: product.id } })
+      ]);
+
+      // Agregar counts al producto
+      const productWithCounts = product.toJSON();
+      productWithCounts.features_count = featuresCount;
+      productWithCounts.applications_count = applicationsCount;
+
+      return productWithCounts;
     } catch (error) {
       throw new Error(`Error al obtener producto: ${error.message}`);
     }

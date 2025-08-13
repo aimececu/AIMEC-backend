@@ -6,6 +6,8 @@ const Brand = require('./Brand');
 const Category = require('./Category');
 const Subcategory = require('./Subcategory');
 const Product = require('./Product');
+const ProductFeature = require('./ProductFeature');
+const ProductApplication = require('./ProductApplication');
 const Session = require('./Session');
 
 // =====================================================
@@ -26,6 +28,13 @@ Brand.hasMany(Product, { foreignKey: 'brand_id', as: 'products' });
 Category.hasMany(Product, { foreignKey: 'category_id', as: 'products' });
 Subcategory.hasMany(Product, { foreignKey: 'subcategory_id', as: 'products' });
 
+// NUEVAS ASOCIACIONES PARA FEATURES Y APPLICATIONS
+Product.hasMany(ProductFeature, { foreignKey: 'product_id', as: 'features' });
+ProductFeature.belongsTo(Product, { foreignKey: 'product_id', as: 'product' });
+
+Product.hasMany(ProductApplication, { foreignKey: 'product_id', as: 'applications' });
+ProductApplication.belongsTo(Product, { foreignKey: 'product_id', as: 'product' });
+
 // Asociaciones de Session
 Session.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 User.hasMany(Session, { foreignKey: 'user_id', as: 'sessions' });
@@ -37,5 +46,7 @@ module.exports = {
   Category,
   Subcategory,
   Product,
+  ProductFeature,
+  ProductApplication,
   Session
 }; 

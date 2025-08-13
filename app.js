@@ -16,6 +16,8 @@ const authRoutes = require('./routes/auth');
 const infoRoutes = require('./routes/info');
 const importRoutes = require('./routes/import');
 const fileRoutes = require('./routes/files');
+const productFeaturesRoutes = require('./routes/productFeatures');
+const productApplicationsRoutes = require('./routes/productApplications');
 
 const app = express();
 
@@ -128,6 +130,14 @@ app.use('/api/files', fileRoutes);
 // Rutas de productos
 app.use("/api/products", productRoutes);
 
+
+
+// Rutas de características de productos
+app.use("/api/productFeatures", productFeaturesRoutes);
+
+// Rutas de aplicaciones de productos
+app.use("/api/productApplications", productApplicationsRoutes);
+
 // Rutas de categorías
 app.use("/api/categories", categoryRoutes);
 
@@ -206,6 +216,8 @@ app.use((req, res) => {
       health: "/health",
       apiDocs: "/api-docs",
       products: "/api/products",
+      productFeatures: "/api/productFeatures",
+      productApplications: "/api/productApplications",
       categories: "/api/categories",
       brands: "/api/brands",
       info: "/api/info",
