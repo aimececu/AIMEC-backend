@@ -57,7 +57,10 @@ const importSystemData = async (req, res, next) => {
           stock_minimo: data.stock_minimo || data['stock_minimo'] || data['Stock Minimo'] || data['stock_minimo'],
           peso: data.peso || data.Peso || data.weight || data.Weight,
           dimensiones: data.dimensiones || data.Dimensiones || data.dimensions || data.Dimensions,
-          imagen: data.imagen || data.Imagen || data.image || data.Image
+          imagen: data.imagen || data.Imagen || data.image || data.Image,
+          // NUEVOS CAMPOS PARA CARACTERÍSTICAS Y APLICACIONES
+          caracteristicas: data.caracteristicas || data.Caracteristicas || data.features || data.Features || data.caracteristicas || data.Caracteristicas,
+          aplicaciones: data.aplicaciones || data.Aplicaciones || data.applications || data.Applications || data.aplicaciones || data.Aplicaciones
         };
 
         results.push(normalizedData);
@@ -145,7 +148,10 @@ const previewImportData = async (req, res, next) => {
           stock_minimo: data.stock_minimo || data['stock_minimo'] || data['Stock Minimo'] || data['stock_minimo'],
           peso: data.peso || data.Peso || data.weight || data.Weight,
           dimensiones: data.dimensiones || data.Dimensiones || data.dimensions || data.Dimensions,
-          imagen: data.imagen || data.Imagen || data.image || data.Image
+          imagen: data.imagen || data.Imagen || data.image || data.Image,
+          // NUEVOS CAMPOS PARA CARACTERÍSTICAS Y APLICACIONES
+          caracteristicas: data.caracteristicas || data.Caracteristicas || data.features || data.Features || data.caracteristicas || data.Caracteristicas,
+          aplicaciones: data.aplicaciones || data.Aplicaciones || data.applications || data.Applications || data.aplicaciones || data.Aplicaciones
         };
 
         results.push(normalizedData);

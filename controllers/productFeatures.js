@@ -5,10 +5,18 @@ const Product = require('../models/Product');
 // CONTROLADOR DE CARACTERÍSTICAS DE PRODUCTOS
 // =====================================================
 
-// Obtener todas las características
+// Obtener todas las características o filtrar por producto
 const getAllFeatures = async (req, res, next) => {
   try {
+    const { product_id } = req.query;
+    
+    let whereClause = {};
+    if (product_id) {
+      whereClause.product_id = parseInt(product_id);
+    }
+
     const features = await ProductFeature.findAll({
+      where: whereClause,
       include: [
         {
           model: Product,

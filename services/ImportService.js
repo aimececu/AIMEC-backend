@@ -1,4 +1,4 @@
-const { Product, Brand, Category, Subcategory } = require('../models');
+const { Product, Brand, Category, Subcategory, ProductFeature, ProductApplication } = require('../models');
 const { Op } = require('sequelize');
 
 class ImportService {
@@ -16,6 +16,8 @@ class ImportService {
         subcategories_existing: 0,
         products_created: 0,
         products_updated: 0,
+        features_created: 0,
+        applications_created: 0,
         errors: []
       };
 
@@ -44,6 +46,18 @@ class ImportService {
           const productResult = await this.processProduct(row, brand.id, category.id, subcategory.id, transaction);
           if (productResult.isNew) results.products_created++;
           else results.products_updated++;
+
+          // Procesar características si existen
+          if (row.caracteristicas) {
+            const featuresCount = await this.processProductFeatures(row.caracteristicas, productResult.id, transaction);
+            results.features_created += featuresCount;
+          }
+
+          // Procesar aplicaciones si existen
+          if (row.aplicaciones) {
+            const applicationsCount = await this.processProductApplications(row.aplicaciones, productResult.id, transaction);
+            results.applications_created += applicationsCount;
+          }
 
         } catch (error) {
           results.errors.push({
@@ -189,6 +203,52 @@ class ImportService {
       product = await Product.create(productDataToSave, { transaction });
       return { ...product.toJSON(), isNew: true };
     }
+  }
+
+  // Procesar características del producto
+  async processProductFeatures(featuresText, productId, transaction) {
+    if (!featuresText || typeof featuresText !== 'string') return 0;
+
+    // Dividir características por punto y coma o coma
+    const features = featuresText.split(/[;,]|\n/).map(f => f.trim()).filter(f => f.length > 0);
+    
+    let createdCount = 0;
+    for (let i = 0; i < features.length; i++) {
+      const featureText = features[i];
+      if (featureText.length > 0) {
+        await ProductFeature.create({
+          product_id: productId,
+          feature_text: featureText,
+          sort_order: i + 1
+        }, { transaction });
+        createdCount++;
+      }
+    }
+    
+    return createdCount;
+  }
+
+  // Procesar aplicaciones del producto
+  async processProductApplications(applicationsText, productId, transaction) {
+    if (!applicationsText || typeof applicationsText !== 'string') return 0;
+
+    // Dividir aplicaciones por punto y coma o coma
+    const applications = applicationsText.split(/[;,]|\n/).map(a => a.trim()).filter(a => a.length > 0);
+    
+    let createdCount = 0;
+    for (let i = 0; i < applications.length; i++) {
+      const applicationText = applications[i];
+      if (applicationText.length > 0) {
+        await ProductApplication.create({
+          product_id: productId,
+          application_text: applicationText,
+          sort_order: i + 1
+        }, { transaction });
+        createdCount++;
+      }
+    }
+    
+    return createdCount;
   }
 
   // Validar datos antes de importar

@@ -5,10 +5,18 @@ const Product = require('../models/Product');
 // CONTROLADOR DE APLICACIONES DE PRODUCTOS
 // =====================================================
 
-// Obtener todas las aplicaciones
+// Obtener todas las aplicaciones o filtrar por producto
 const getAllApplications = async (req, res, next) => {
   try {
+    const { product_id } = req.query;
+    
+    let whereClause = {};
+    if (product_id) {
+      whereClause.product_id = parseInt(product_id);
+    }
+
     const applications = await ProductApplication.findAll({
+      where: whereClause,
       include: [
         {
           model: Product,
