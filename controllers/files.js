@@ -1,7 +1,7 @@
 const { uploadToS3, deleteFromS3, getSignedFileUrl } = require('../config/aws');
 const { validateInput } = require('../config/validation');
 const { authenticateToken } = require('../config/jwt');
-const logger = require('../config/logger');
+
 
 // Esquema de validación para subida de archivos
 const uploadSchema = {
@@ -49,7 +49,7 @@ const uploadFile = async (req, res) => {
       const result = await uploadToS3(req.file, key, req.file.mimetype);
 
       // Registrar la subida
-      logger.info(`Archivo subido: ${key} por usuario ${req.user.id}`);
+      console.log(`Archivo subido: ${key} por usuario ${req.user.id}`);
 
       res.json({
         success: true,
@@ -66,7 +66,7 @@ const uploadFile = async (req, res) => {
       });
     });
   } catch (error) {
-    logger.error('Error subiendo archivo:', error);
+    console.log('Error subiendo archivo:', error);
     res.status(500).json({
       success: false,
       error: 'Error al subir archivo'
@@ -98,14 +98,14 @@ const deleteFile = async (req, res) => {
     await deleteFromS3(key);
 
     // Registrar la eliminación
-    logger.info(`Archivo eliminado: ${key} por usuario ${req.user.id}`);
+          console.log(`Archivo eliminado: ${key} por usuario ${req.user.id}`);
 
     res.json({
       success: true,
       message: 'Archivo eliminado exitosamente'
     });
   } catch (error) {
-    logger.error('Error eliminando archivo:', error);
+    console.log('Error eliminando archivo:', error);
     res.status(500).json({
       success: false,
       error: 'Error al eliminar archivo'
@@ -147,7 +147,7 @@ const getSignedUrlController = async (req, res) => {
       }
     });
   } catch (error) {
-    logger.error('Error generando URL firmada:', error);
+    console.log('Error generando URL firmada:', error);
     res.status(500).json({
       success: false,
       error: 'Error al generar URL firmada'

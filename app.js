@@ -5,7 +5,7 @@ const config = require('./config/env');
 const { testConnection } = require('./config/database');
 const setupMiddlewares = require('./config/middlewares');
 const setupSwaggerUI = require('./config/swagger-ui');
-const logger = require('./config/logger');
+
 
 // Importar rutas
 const productRoutes = require('./routes/products');
@@ -40,17 +40,17 @@ app.use(async (req, res, next) => {
       await testConnection();
       
       // Sincronizar base de datos automáticamente
-      const { syncDatabase } = require('./config/database');
-      await syncDatabase();
+      // const { syncDatabase } = require('./config/database');
+      // await syncDatabase();
       
       // Crear usuario administrador por defecto
       const { createAdminUser } = require('./scripts/create-admin-user');
       await createAdminUser();
       
       req.app.locals.dbInitialized = true;
-      logger.databaseConnected();
+      console.log('✅ Conexión a base de datos establecida');
     } catch (error) {
-      logger.databaseError(error);
+      console.log('❌ Error al conectar con la base de datos:', error.message);
     }
   }
   next();
@@ -64,7 +64,7 @@ setupSwaggerUI(app);
 
 // Log de Swagger generado
 const specs = require('./config/swagger');
-logger.swaggerGenerated(specs);
+console.log('📚 Especificaciones de Swagger generadas');
 
 // =====================================================
 // RUTAS PRINCIPALES
@@ -166,28 +166,40 @@ app.use("/api/auth", authRoutes);
 
 // Middleware para manejo de errores
 const errorHandler = (err, req, res, next) => {
-  console.error('Error:', err.message);
+  // Verificar que err existe y tiene las propiedades necesarias
+  if (!err) {
+    console.error('Error: Objeto de error indefinido');
+    return res.status(500).json({
+      success: false,
+      error: 'Error interno del servidor',
+      message: 'Error desconocido'
+    });
+  }
+
+  console.log('Error:', err);
+  console.error('Error:', err.message || 'Error sin mensaje');
+  console.error('Tipo de error:', err.name || 'Sin nombre');
   
   // Error de validación de Sequelize
-  if (err.name === 'SequelizeValidationError') {
+  if (err.name === 'SequelizeValidationError' && err.errors) {
     return res.status(400).json({
       success: false,
       error: 'Error de validación',
       details: err.errors.map(e => ({
-        field: e.path,
-        message: e.message
+        field: e.path || 'campo',
+        message: e.message || 'Error de validación'
       }))
     });
   }
 
   // Error de restricción única de Sequelize
-  if (err.name === 'SequelizeUniqueConstraintError') {
+  if (err.name === 'SequelizeUniqueConstraintError' && err.errors) {
     return res.status(400).json({
       success: false,
       error: 'Error de restricción única',
       details: err.errors.map(e => ({
-        field: e.path,
-        message: e.message
+        field: e.path || 'campo',
+        message: e.message || 'Error de restricción única'
       }))
     });
   }
@@ -204,7 +216,7 @@ const errorHandler = (err, req, res, next) => {
   res.status(500).json({ 
     success: false,
     error: 'Error interno del servidor',
-    message: process.env.NODE_ENV === 'development' ? err.message : 'Algo salió mal'
+    message: process.env.NODE_ENV === 'development' && err.message ? err.message : 'Algo salió mal'
   });
 };
 

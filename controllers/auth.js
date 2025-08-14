@@ -6,7 +6,7 @@ const User = require('../models/User');
 const SessionService = require('../services/SessionService');
 const bcrypt = require('bcryptjs');
 const { validateEmail, validatePassword, validateText } = require('../config/validation');
-const logger = require('../config/logger');
+
 
 // Configuración de bcrypt
 const bcryptConfig = {
@@ -154,7 +154,7 @@ const login = async (req, res) => {
       }
     });
 
-    logger.info(`Usuario ${user.email} inició sesión desde ${ipAddress}`);
+          console.log(`Usuario ${user.email} inició sesión desde ${ipAddress}`);
 
   } catch (error) {
     console.error('Error en login:', error);
@@ -183,7 +183,7 @@ const logout = async (req, res) => {
     });
 
     if (req.user) {
-      logger.info(`Usuario ${req.user.email} cerró sesión`);
+      console.log(`Usuario ${req.user.email} cerró sesión`);
     }
 
   } catch (error) {
@@ -444,7 +444,7 @@ const register = async (req, res) => {
       }
     });
 
-    logger.info(`Usuario ${email} registrado por admin ${req.user.email}`);
+          console.log(`Usuario ${email} registrado por admin ${req.user.email}`);
 
   } catch (error) {
     console.error('Error en registro:', error);

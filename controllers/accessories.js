@@ -1,5 +1,4 @@
 const AccessoryService = require('../services/AccessoryService');
-const { logger } = require('../config/logger');
 
 /**
  * Obtiene todos los accesorios compatibles para un producto principal
@@ -19,7 +18,18 @@ const getAccessoriesByProduct = async (req, res) => {
 
     const result = await AccessoryService.getAccessoriesByProduct(parseInt(productId));
     
-    logger.info(`Accesorios obtenidos para producto ${productId}: ${result.count} encontrados`);
+    // Si no hay producto principal, devolver array vacío en lugar de error
+    if (!result.mainProduct) {
+      return res.json({
+        success: true,
+        data: {
+          mainProduct: null,
+          accessories: [],
+          count: 0
+        },
+        count: 0
+      });
+    }
 
     res.json({
       success: true,
@@ -28,11 +38,25 @@ const getAccessoriesByProduct = async (req, res) => {
     });
 
   } catch (error) {
-    logger.error('Error al obtener accesorios:', error);
+    console.log('Error al obtener accesorios:', error);
+    
+    // Verificar que error.message existe antes de usarlo
+    if (error && error.message === 'Producto principal no encontrado') {
+      return res.status(404).json({
+        success: false,
+        message: 'Producto no encontrado',
+        data: {
+          mainProduct: null,
+          accessories: [],
+          count: 0
+        }
+      });
+    }
+    
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: process.env.NODE_ENV === 'development' && error && error.message ? error.message : 'Error desconocido'
     });
   }
 };
@@ -66,11 +90,12 @@ const createAccessory = async (req, res) => {
     });
 
   } catch (error) {
-    logger.error('Error al crear accesorio:', error);
+    console.log('Error al crear accesorio:', error);
     
-    if (error.message.includes('no existen') || 
+    if (error && error.message && (
+        error.message.includes('no existen') || 
         error.message.includes('no puede ser accesorio') ||
-        error.message.includes('ya existe')) {
+        error.message.includes('ya existe'))) {
       return res.status(400).json({
         success: false,
         message: error.message
@@ -80,7 +105,7 @@ const createAccessory = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: process.env.NODE_ENV === 'development' && error && error.message ? error.message : 'Error desconocido'
     });
   }
 };
@@ -109,9 +134,9 @@ const deleteAccessory = async (req, res) => {
     });
 
   } catch (error) {
-    logger.error('Error al eliminar accesorio:', error);
+    console.log('Error al eliminar accesorio:', error);
     
-    if (error.message === 'Accesorio no encontrado') {
+    if (error && error.message === 'Accesorio no encontrado') {
       return res.status(404).json({
         success: false,
         message: error.message
@@ -121,7 +146,7 @@ const deleteAccessory = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: process.env.NODE_ENV === 'development' && error && error.message ? error.message : 'Error desconocido'
     });
   }
 };

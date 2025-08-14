@@ -3,7 +3,7 @@ const rateLimit = require('express-rate-limit');
 // Rate limiter general para toda la aplicación
 const generalLimiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 900000, // 15 minutos por defecto
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // 100 requests por ventana
+  max: process.env.NODE_ENV === 'development' ? 500 : (parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100), // 500 en desarrollo, 100 en producción
   message: {
     error: 'Demasiadas solicitudes desde esta IP, intenta de nuevo más tarde.',
     retryAfter: Math.ceil((parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 900000) / 1000 / 60) // minutos
@@ -22,7 +22,7 @@ const generalLimiter = rateLimit({
 // Rate limiter más estricto para autenticación
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 5, // 5 intentos de login
+  max: process.env.NODE_ENV === 'development' ? 20 : 5, // 20 en desarrollo, 5 en producción
   message: {
     error: 'Demasiados intentos de autenticación, intenta de nuevo más tarde.',
     retryAfter: 15

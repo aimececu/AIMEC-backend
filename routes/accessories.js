@@ -5,7 +5,7 @@ const {
   createAccessory, 
   deleteAccessory 
 } = require('../controllers/accessories');
-const { authenticateToken } = require('../config/jwt');
+const { verifySession, requireAdmin } = require('../controllers/auth');
 
 /**
  * @swagger
@@ -120,7 +120,7 @@ router.get('/product/:productId', getAccessoriesByProduct);
  *     description: Crea una nueva relación entre un producto principal y un producto accesorio
  *     tags: [Accesorios]
  *     security:
- *       - bearerAuth: []
+ *       - sessionAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -160,7 +160,7 @@ router.get('/product/:productId', getAccessoriesByProduct);
  *                   type: string
  *                   example: "main_product_id y accessory_product_id son requeridos"
  *       401:
- *         description: No autorizado - Token requerido
+ *         description: No autorizado - Sesión requerida
  *         content:
  *           application/json:
  *             schema:
@@ -171,7 +171,20 @@ router.get('/product/:productId', getAccessoriesByProduct);
  *                   example: false
  *                 error:
  *                   type: string
- *                   example: "Token de acceso requerido"
+ *                   example: "No se proporcionó ID de sesión"
+ *       403:
+ *         description: Acceso denegado - Se requieren permisos de administrador
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: "Acceso denegado. Se requieren permisos de administrador."
  *       404:
  *         description: Producto no encontrado
  *         content:
@@ -212,7 +225,7 @@ router.get('/product/:productId', getAccessoriesByProduct);
  *                   type: string
  *                   example: "Error interno del servidor"
  */
-router.post('/', authenticateToken, createAccessory);
+router.post('/', verifySession, requireAdmin, createAccessory);
 
 /**
  * @swagger
@@ -222,7 +235,7 @@ router.post('/', authenticateToken, createAccessory);
  *     description: Elimina una relación de accesorio específica por su ID
  *     tags: [Accesorios]
  *     security:
- *       - bearerAuth: []
+ *       - sessionAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -259,7 +272,7 @@ router.post('/', authenticateToken, createAccessory);
  *                   type: string
  *                   example: "ID válido es requerido"
  *       401:
- *         description: No autorizado - Token requerido
+ *         description: No autorizado - Sesión requerida
  *         content:
  *           application/json:
  *             schema:
@@ -270,7 +283,20 @@ router.post('/', authenticateToken, createAccessory);
  *                   example: false
  *                 error:
  *                   type: string
- *                   example: "Token de acceso requerido"
+ *                   example: "No se proporcionó ID de sesión"
+ *       403:
+ *         description: Acceso denegado - Se requieren permisos de administrador
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: "Acceso denegado. Se requieren permisos de administrador."
  *       404:
  *         description: Accesorio no encontrado
  *         content:
@@ -298,6 +324,6 @@ router.post('/', authenticateToken, createAccessory);
  *                   type: string
  *                   example: "Error interno del servidor"
  */
-router.delete('/:id', authenticateToken, deleteAccessory);
+router.delete('/:id', verifySession, requireAdmin, deleteAccessory);
 
 module.exports = router;

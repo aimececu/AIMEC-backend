@@ -195,13 +195,21 @@ class ProductService {
     }
   }
 
-  // Limpiar campos numéricos
+  // Limpiar campos numéricos y campos de ID
   cleanNumericFields(data) {
     const cleaned = { ...data };
+    
+    // Campos numéricos que pueden ser null
     const numericFields = [
       'price', 'stock_quantity', 'min_stock_level', 'weight'
     ];
     
+    // Campos de ID que pueden ser null (opcionales)
+    const idFields = [
+      'brand_id', 'category_id', 'subcategory_id'
+    ];
+    
+    // Limpiar campos numéricos
     numericFields.forEach(field => {
       if (cleaned[field] === '' || cleaned[field] === null || cleaned[field] === undefined) {
         cleaned[field] = null;
@@ -210,6 +218,23 @@ class ProductService {
         cleaned[field] = isNaN(num) ? null : num;
       }
     });
+    
+    // Limpiar campos de ID
+    idFields.forEach(field => {
+      if (cleaned[field] === '' || cleaned[field] === null || cleaned[field] === undefined) {
+        cleaned[field] = null;
+      } else if (typeof cleaned[field] === 'string') {
+        const num = parseInt(cleaned[field]);
+        cleaned[field] = isNaN(num) ? null : num;
+      }
+    });
+    
+    // Limpiar campos booleanos
+    if (cleaned.is_active === '' || cleaned.is_active === null || cleaned.is_active === undefined) {
+      cleaned.is_active = true; // Por defecto activo
+    } else if (typeof cleaned.is_active === 'string') {
+      cleaned.is_active = cleaned.is_active === 'true' || cleaned.is_active === '1';
+    }
     
     return cleaned;
   }

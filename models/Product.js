@@ -28,7 +28,7 @@ const Product = sequelize.define('Product', {
   },
   brand_id: {
     type: DataTypes.INTEGER,
-    allowNull: false,
+    allowNull: true, // Cambiar a true para permitir productos sin marca
     references: {
       model: 'brands',
       key: 'id'
@@ -36,7 +36,7 @@ const Product = sequelize.define('Product', {
   },
   category_id: {
     type: DataTypes.INTEGER,
-    allowNull: false,
+    allowNull: true, // Cambiar a true para permitir productos sin categoría
     references: {
       model: 'categories',
       key: 'id'
@@ -52,17 +52,17 @@ const Product = sequelize.define('Product', {
   },
   price: {
     type: DataTypes.DECIMAL(10, 2),
-    allowNull: false,
+    allowNull: true, // Cambiar a true para permitir productos sin precio
     defaultValue: 0.00
   },
   stock_quantity: {
     type: DataTypes.INTEGER,
-    allowNull: false,
+    allowNull: true, // Cambiar a true para permitir productos sin stock
     defaultValue: 0
   },
   min_stock_level: {
     type: DataTypes.INTEGER,
-    allowNull: false,
+    allowNull: true, // Cambiar a true para permitir productos sin nivel mínimo
     defaultValue: 0
   },
   weight: {

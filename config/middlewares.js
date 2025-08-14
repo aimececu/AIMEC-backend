@@ -4,7 +4,7 @@ const morgan = require('morgan');
 const path = require('path');
 const corsMiddleware = require('./cors');
 const { generalLimiter } = require('./rateLimit');
-const logger = require('./logger');
+
 
 // Configuración de middlewares
 const setupMiddlewares = (app) => {
@@ -32,7 +32,7 @@ const setupMiddlewares = (app) => {
       // Interceptar el final de la respuesta
       res.on('finish', () => {
         const duration = Date.now() - start;
-        logger.request(req.method, req.path, res.statusCode, duration);
+        console.log(`${req.method} ${req.path} ${res.statusCode} (${duration}ms)`);
       });
       
       next();

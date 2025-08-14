@@ -1,5 +1,4 @@
 const { Accessory, Product, Brand, Category, Subcategory } = require('../models');
-const { logger } = require('../config/logger');
 
 class AccessoryService {
   /**
@@ -12,59 +11,75 @@ class AccessoryService {
       // Verificar que el producto principal existe
       const mainProduct = await Product.findByPk(productId);
       if (!mainProduct) {
-        throw new Error('Producto principal no encontrado');
+        return {
+          mainProduct: null,
+          accessories: [],
+          count: 0
+        };
       }
 
       // Buscar accesorios compatibles
       const accessories = await Accessory.findAll({
         where: {
           main_product_id: parseInt(productId)
-        },
-        include: [
-          {
-            model: Product,
-            as: 'accessoryProduct',
-            include: [
-              {
-                model: Brand,
-                as: 'brand',
-                attributes: ['id', 'name', 'logo_url']
-              },
-              {
-                model: Category,
-                as: 'category',
-                attributes: ['id', 'name', 'color']
-              },
-              {
-                model: Subcategory,
-                as: 'subcategory',
-                attributes: ['id', 'name']
-              }
-            ],
-            attributes: [
-              'id', 'sku', 'name', 'description', 'short_description',
-              'price', 'original_price', 'main_image', 'additional_images',
-              'is_active', 'stock_quantity'
-            ]
-          }
-        ]
+        }
       });
 
-      return {
+      // Si no hay accesorios, devolver array vacío
+      if (accessories.length === 0) {
+        return {
+          mainProduct: {
+            id: mainProduct.id,
+            sku: mainProduct.sku,
+            name: mainProduct.name
+          },
+          accessories: [],
+          count: 0
+        };
+      }
+
+      // Para cada accesorio, obtener el producto asociado
+      const accessoriesWithProducts = [];
+      for (const accessory of accessories) {
+        try {
+          const accessoryProduct = await Product.findByPk(accessory.accessory_product_id);
+          if (accessoryProduct) {
+            accessoriesWithProducts.push({
+              id: accessory.id,
+              accessoryProduct: {
+                id: accessoryProduct.id,
+                sku: accessoryProduct.sku,
+                name: accessoryProduct.name,
+                description: accessoryProduct.description,
+                price: accessoryProduct.price,
+                main_image: accessoryProduct.main_image,
+                is_active: accessoryProduct.is_active
+              }
+            });
+          }
+        } catch (productError) {
+          console.log(`Error obteniendo producto accesorio ${accessory.accessory_product_id}:`, productError);
+        }
+      }
+
+      const result = {
         mainProduct: {
           id: mainProduct.id,
           sku: mainProduct.sku,
           name: mainProduct.name
         },
-        accessories: accessories.map(acc => ({
-          id: acc.id,
-          accessoryProduct: acc.accessoryProduct
-        })),
-        count: accessories.length
+        accessories: accessoriesWithProducts,
+        count: accessoriesWithProducts.length
       };
 
+      return result;
+
     } catch (error) {
-      logger.error('Error en AccessoryService.getAccessoriesByProduct:', error);
+      console.log('Error en AccessoryService.getAccessoriesByProduct:', error);
+      // Asegurar que el error tenga un mensaje válido
+      if (!error || !error.message) {
+        throw new Error('Error interno al obtener accesorios');
+      }
       throw error;
     }
   }
@@ -110,11 +125,10 @@ class AccessoryService {
         accessory_product_id: accessoryProductId
       });
 
-      logger.info(`Accesorio creado: ${mainProductId} -> ${accessoryProductId}`);
       return accessory;
 
     } catch (error) {
-      logger.error('Error en AccessoryService.createAccessory:', error);
+      console.log('Error en AccessoryService.createAccessory:', error);
       throw error;
     }
   }
@@ -132,11 +146,10 @@ class AccessoryService {
       }
 
       await accessory.destroy();
-      logger.info(`Accesorio eliminado: ${accessoryId}`);
       return true;
 
     } catch (error) {
-      logger.error('Error en AccessoryService.deleteAccessory:', error);
+      console.log('Error en AccessoryService.deleteAccessory:', error);
       throw error;
     }
   }
@@ -182,7 +195,7 @@ class AccessoryService {
       }));
 
     } catch (error) {
-      logger.error('Error en AccessoryService.getProductsByAccessory:', error);
+      console.log('Error en AccessoryService.getProductsByAccessory:', error);
       throw error;
     }
   }
@@ -205,7 +218,7 @@ class AccessoryService {
       return !!accessory;
 
     } catch (error) {
-      logger.error('Error en AccessoryService.areProductsRelated:', error);
+      console.log('Error en AccessoryService.areProductsRelated:', error);
       throw error;
     }
   }

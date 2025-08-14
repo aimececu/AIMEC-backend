@@ -80,7 +80,35 @@ const updateProduct = async (req, res, next) => {
   try {
     const productId = parseInt(req.params.id);
     const productData = req.body;
-    const product = await ProductService.updateProduct(productId, productData);
+    
+    // Validar que el ID sea válido
+    if (isNaN(productId)) {
+      return res.status(400).json({
+        success: false,
+        error: "ID de producto inválido"
+      });
+    }
+    
+    // Limpiar datos antes de enviar al servicio
+    const cleanedData = { ...productData };
+    
+    // Convertir campos vacíos a null para campos opcionales
+    const optionalFields = ['brand_id', 'category_id', 'subcategory_id', 'description', 'short_description', 'main_image', 'dimensions'];
+    optionalFields.forEach(field => {
+      if (cleanedData[field] === '') {
+        cleanedData[field] = null;
+      }
+    });
+    
+    // Convertir campos numéricos vacíos a null
+    const numericFields = ['price', 'stock_quantity', 'min_stock_level', 'weight'];
+    numericFields.forEach(field => {
+      if (cleanedData[field] === '') {
+        cleanedData[field] = null;
+      }
+    });
+    
+    const product = await ProductService.updateProduct(productId, cleanedData);
     
     res.json({
       success: true,
@@ -88,6 +116,7 @@ const updateProduct = async (req, res, next) => {
       data: product
     });
   } catch (error) {
+    console.log('Error en updateProduct controller:', error);
     next(error);
   }
 };
