@@ -1,4 +1,4 @@
-const { Product, Brand, Category, Subcategory, ProductFeature, ProductApplication } = require('../models');
+const { Product, Brand, Category, Subcategory, ProductFeature, ProductApplication, Accessory } = require('../models');
 const { Op } = require('sequelize');
 
 class ProductService {
@@ -74,11 +74,11 @@ class ProductService {
 
       const products = await Product.findAndCountAll(options);
       
-      // Obtener counts de características y aplicaciones para cada producto
+      // Obtener counts de características, aplicaciones y accesorios para cada producto
       const productIds = products.rows.map(p => p.id);
       
       if (productIds.length > 0) {
-        const [featuresCounts, applicationsCounts] = await Promise.all([
+        const [featuresCounts, applicationsCounts, accessoriesCounts] = await Promise.all([
           ProductFeature.findAll({
             attributes: [
               'product_id',
@@ -96,18 +96,29 @@ class ProductService {
             where: { product_id: { [Op.in]: productIds } },
             group: ['product_id'],
             raw: true
+          }),
+          Accessory.findAll({
+            attributes: [
+              'main_product_id',
+              [Accessory.sequelize.fn('COUNT', Accessory.sequelize.col('id')), 'count']
+            ],
+            where: { main_product_id: { [Op.in]: productIds } },
+            group: ['main_product_id'],
+            raw: true
           })
         ]);
 
         // Crear mapas para acceso rápido
         const featuresMap = new Map(featuresCounts.map(f => [f.product_id, parseInt(f.count)]));
         const applicationsMap = new Map(applicationsCounts.map(a => [a.product_id, parseInt(a.count)]));
+        const accessoriesMap = new Map(accessoriesCounts.map(acc => [acc.main_product_id, parseInt(acc.count)]));
 
         // Agregar counts a cada producto
         const productsWithCounts = products.rows.map(product => ({
           ...product.toJSON(),
           features_count: featuresMap.get(product.id) || 0,
-          applications_count: applicationsMap.get(product.id) || 0
+          applications_count: applicationsMap.get(product.id) || 0,
+          accessories_count: accessoriesMap.get(product.id) || 0
         }));
 
         return {
@@ -122,7 +133,8 @@ class ProductService {
         products: products.rows.map(p => ({
           ...p.toJSON(),
           features_count: 0,
-          applications_count: 0
+          applications_count: 0,
+          accessories_count: 0
         })),
         total: products.count,
         limit: filters.limit || null,
@@ -165,16 +177,18 @@ class ProductService {
         throw new Error('Producto no encontrado');
       }
 
-      // Obtener counts de características y aplicaciones
-      const [featuresCount, applicationsCount] = await Promise.all([
+      // Obtener counts de características, aplicaciones y accesorios
+      const [featuresCount, applicationsCount, accessoriesCount] = await Promise.all([
         ProductFeature.count({ where: { product_id: product.id } }),
-        ProductApplication.count({ where: { product_id: product.id } })
+        ProductApplication.count({ where: { product_id: product.id } }),
+        Accessory.count({ where: { main_product_id: product.id } })
       ]);
 
       // Agregar counts al producto
       const productWithCounts = product.toJSON();
       productWithCounts.features_count = featuresCount;
       productWithCounts.applications_count = applicationsCount;
+      productWithCounts.accessories_count = accessoriesCount;
 
       return productWithCounts;
     } catch (error) {
