@@ -9,6 +9,7 @@ const Product = require('./Product');
 const ProductFeature = require('./ProductFeature');
 const ProductApplication = require('./ProductApplication');
 const Accessory = require('./Accessory');
+const RelatedProduct = require('./RelatedProduct');
 const Session = require('./Session');
 
 // =====================================================
@@ -42,6 +43,12 @@ Product.hasMany(Accessory, { foreignKey: 'accessory_product_id', as: 'accessoryF
 Accessory.belongsTo(Product, { foreignKey: 'main_product_id', as: 'mainProduct' });
 Accessory.belongsTo(Product, { foreignKey: 'accessory_product_id', as: 'accessoryProduct' });
 
+// Asociaciones de RelatedProduct
+Product.hasMany(RelatedProduct, { foreignKey: 'product_id', as: 'mainProductRelations' });
+Product.hasMany(RelatedProduct, { foreignKey: 'related_product_id', as: 'relatedForProducts' });
+RelatedProduct.belongsTo(Product, { foreignKey: 'product_id', as: 'mainProduct' });
+RelatedProduct.belongsTo(Product, { foreignKey: 'related_product_id', as: 'relatedProduct' });
+
 // Asociaciones de Session
 Session.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 User.hasMany(Session, { foreignKey: 'user_id', as: 'sessions' });
@@ -56,5 +63,6 @@ module.exports = {
   ProductFeature,
   ProductApplication,
   Accessory,
+  RelatedProduct,
   Session
 }; 
