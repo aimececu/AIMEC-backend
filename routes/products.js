@@ -87,6 +87,87 @@ router.get('/', productController.getAllProducts);
 
 /**
  * @swagger
+ * /api/products/export:
+ *   get:
+ *     summary: Exportar todos los productos con relaciones
+ *     description: Retorna todos los productos con características, aplicaciones, accesorios y productos relacionados para exportación
+ *     tags: [Productos]
+ *     responses:
+ *       200:
+ *         description: Productos con relaciones completas
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                       sku:
+ *                         type: string
+ *                       name:
+ *                         type: string
+ *                       description:
+ *                         type: string
+ *                       price:
+ *                         type: number
+ *                       stock_quantity:
+ *                         type: integer
+ *                       min_stock:
+ *                         type: integer
+ *                       weight:
+ *                         type: number
+ *                       dimensions:
+ *                         type: string
+ *                       main_image:
+ *                         type: string
+ *                       brand:
+ *                         type: object
+ *                         properties:
+ *                           name:
+ *                             type: string
+ *                       category:
+ *                         type: object
+ *                         properties:
+ *                           name:
+ *                             type: string
+ *                       subcategory:
+ *                         type: object
+ *                         properties:
+ *                           name:
+ *                             type: string
+ *                       features:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                       applications:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                       accessories:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                       related_products:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             sku:
+ *                               type: string
+ *                             type:
+ *                               type: string
+ */
+router.get('/export', productController.exportProductsWithRelations);
+
+/**
+ * @swagger
  * /api/products/search:
  *   get:
  *     summary: Buscar productos

@@ -1,4 +1,4 @@
-const { Product, Brand, Category, Subcategory, ProductFeature, ProductApplication, Accessory } = require('../models');
+const { Product, Brand, Category, Subcategory, ProductFeature, ProductApplication, Accessory, RelatedProduct } = require('../models');
 const { Op } = require('sequelize');
 
 class ProductService {
@@ -447,6 +447,162 @@ class ProductService {
       });
     } catch (error) {
       throw new Error(`Error al contar productos: ${error.message}`);
+    }
+  }
+
+  // Exportar productos con todas sus relaciones para CSV
+  async exportProductsWithRelations() {
+    try {
+      console.log('Iniciando exportación de productos con relaciones...');
+      
+      // Obtener todos los productos activos con relaciones básicas
+      const products = await Product.findAll({
+        where: { is_active: true },
+        include: [
+          {
+            model: Brand,
+            as: 'brand',
+            attributes: ['name']
+          },
+          {
+            model: Category,
+            as: 'category',
+            attributes: ['name']
+          },
+          {
+            model: Subcategory,
+            as: 'subcategory',
+            attributes: ['name']
+          }
+        ],
+        attributes: [
+          'id', 'sku', 'name', 'description', 'price', 'stock_quantity', 
+          'min_stock_level', 'weight', 'dimensions', 'main_image'
+        ],
+        order: [['id', 'ASC']]
+      });
+
+      console.log(`Encontrados ${products.length} productos, obteniendo relaciones...`);
+
+      // Obtener todas las relaciones en paralelo para todos los productos
+      const productIds = products.map(p => p.id);
+      
+      const [featuresData, applicationsData, accessoriesData, relatedProductsData] = await Promise.all([
+        // Características
+        ProductFeature.findAll({
+          where: { product_id: { [Op.in]: productIds } },
+          attributes: ['product_id', 'feature_text'],
+          raw: true
+        }),
+        // Aplicaciones
+        ProductApplication.findAll({
+          where: { product_id: { [Op.in]: productIds } },
+          attributes: ['product_id', 'application_text'],
+          raw: true
+        }),
+        // Accesorios
+        Accessory.findAll({
+          where: { main_product_id: { [Op.in]: productIds } },
+          include: [{
+            model: Product,
+            as: 'accessoryProduct',
+            attributes: ['sku']
+          }],
+          raw: true,
+          nest: true
+        }),
+        // Productos relacionados
+        RelatedProduct.findAll({
+          where: { product_id: { [Op.in]: productIds } },
+          include: [{
+            model: Product,
+            as: 'relatedProduct',
+            attributes: ['sku']
+          }],
+          attributes: ['product_id', 'relationship_type'],
+          raw: true
+        })
+      ]);
+
+      console.log('Relaciones obtenidas, procesando datos...');
+
+      // Crear mapas para acceso rápido
+      const featuresMap = new Map();
+      const applicationsMap = new Map();
+      const accessoriesMap = new Map();
+      const relatedProductsMap = new Map();
+
+      // Agrupar características por producto
+      featuresData.forEach(f => {
+        if (!featuresMap.has(f.product_id)) {
+          featuresMap.set(f.product_id, []);
+        }
+        featuresMap.get(f.product_id).push(f.feature_text);
+      });
+
+      // Agrupar aplicaciones por producto
+      applicationsData.forEach(a => {
+        if (!applicationsMap.has(a.product_id)) {
+          applicationsMap.set(a.product_id, []);
+        }
+        applicationsMap.get(a.product_id).push(a.application_text);
+      });
+
+      // Agrupar accesorios por producto
+      accessoriesData.forEach(acc => {
+        if (!accessoriesMap.has(acc.main_product_id)) {
+          accessoriesMap.set(acc.main_product_id, []);
+        }
+        accessoriesMap.get(acc.main_product_id).push(acc.accessoryProduct?.sku);
+      });
+
+      // Agrupar productos relacionados por producto
+      relatedProductsData.forEach(rp => {
+        if (!relatedProductsMap.has(rp.product_id)) {
+          relatedProductsMap.set(rp.product_id, []);
+        }
+        relatedProductsMap.get(rp.product_id).push({
+          sku: rp['relatedProduct.sku'],
+          type: rp.relationship_type
+        });
+      });
+
+      // Debug: Log de productos relacionados
+      console.log('=== DEBUG PRODUCTOS RELACIONADOS ===');
+      console.log('Total productos relacionados encontrados:', relatedProductsData.length);
+      console.log('Muestra de productos relacionados:', relatedProductsData.slice(0, 3));
+      console.log('Estructura del primer producto relacionado:', JSON.stringify(relatedProductsData[0], null, 2));
+      console.log('Mapa de productos relacionados:', Object.fromEntries(relatedProductsMap));
+      console.log('=====================================');
+
+      // Construir resultado final
+      const result = products.map(product => {
+        const productData = product.toJSON();
+        
+        return {
+          ...productData,
+          brand: productData.brand?.name || '',
+          category: productData.category?.name || '',
+          subcategory: productData.subcategory?.name || '',
+          features: featuresMap.get(product.id) || [],
+          applications: applicationsMap.get(product.id) || [],
+          accessories: accessoriesMap.get(product.id) || [],
+          related_products: relatedProductsMap.get(product.id) || []
+        };
+      });
+
+      // Debug: Log del resultado final
+      console.log('=== DEBUG RESULTADO FINAL ===');
+      console.log('Total productos procesados:', result.length);
+      console.log('Muestra del primer producto:', result[0]);
+      console.log('Productos con relaciones:', result.filter(p => p.related_products.length > 0).length);
+      console.log('=====================================');
+
+      console.log('Exportación completada exitosamente');
+      return result;
+    } catch (error) {
+      console.error('Error en exportProductsWithRelations:', error);
+      throw new Error(`Error al exportar productos con relaciones: ${error.message}`);
     }
   }
 }

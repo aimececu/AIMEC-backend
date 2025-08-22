@@ -18,6 +18,8 @@ class ImportService {
         products_updated: 0,
         features_created: 0,
         applications_created: 0,
+        accessories_created: 0,
+        related_products_created: 0,
         errors: []
       };
 
@@ -57,6 +59,18 @@ class ImportService {
           if (row.aplicaciones) {
             const applicationsCount = await this.processProductApplications(row.aplicaciones, productResult.id, transaction);
             results.applications_created += applicationsCount;
+          }
+
+          // Procesar accesorios si existen
+          if (row.accesorios) {
+            const accessoriesCount = await this.processProductAccessories(row.accesorios, productResult.id, transaction);
+            results.accessories_created += accessoriesCount;
+          }
+
+          // Procesar productos relacionados si existen
+          if (row.productos_relacionados) {
+            const relatedCount = await this.processProductRelated(row.productos_relacionados, productResult.id, transaction);
+            results.related_products_created += relatedCount;
           }
 
         } catch (error) {
@@ -251,12 +265,90 @@ class ImportService {
     return createdCount;
   }
 
+  // Procesar accesorios del producto
+  async processProductAccessories(accessoriesText, productId, transaction) {
+    if (!accessoriesText || typeof accessoriesText !== 'string') return 0;
+
+    // Dividir accesorios por punto y coma o coma
+    const accessories = accessoriesText.split(/[;,]|\n/).map(a => a.trim()).filter(a => a.length > 0);
+    
+    let createdCount = 0;
+    for (let i = 0; i < accessories.length; i++) {
+      const accessorySku = accessories[i];
+      if (accessorySku.length > 0) {
+        // Buscar el producto accesorio por SKU
+        const accessoryProduct = await Product.findOne({
+          where: { sku: accessorySku, is_active: true },
+          transaction
+        });
+        
+        if (accessoryProduct) {
+          // Crear la relación de accesorio
+          await require('../models').Accessory.create({
+            main_product_id: productId,
+            accessory_product_id: accessoryProduct.id,
+            sort_order: i + 1
+          }, { transaction });
+          createdCount++;
+        }
+      }
+    }
+    
+    return createdCount;
+  }
+
+  // Procesar productos relacionados del producto
+  async processProductRelated(relatedText, productId, transaction) {
+    if (!relatedText || typeof relatedText !== 'string') return 0;
+
+    // Dividir productos relacionados por punto y coma o coma
+    const related = relatedText.split(/[;,]|\n/).map(r => r.trim()).filter(r => r.length > 0);
+    
+    let createdCount = 0;
+    for (let i = 0; i < related.length; i++) {
+      const relatedItem = related[i];
+      if (relatedItem.length > 0) {
+        // Formato esperado: "SKU:Tipo" o solo "SKU"
+        const [relatedSku, relationshipType] = relatedItem.split(':');
+        
+        if (relatedSku) {
+          // Buscar el producto relacionado por SKU
+          const relatedProduct = await Product.findOne({
+            where: { sku: relatedSku.trim(), is_active: true },
+            transaction
+          });
+          
+          if (relatedProduct) {
+            // Crear la relación
+            await require('../models').RelatedProduct.create({
+              product_id: productId,
+              related_product_id: relatedProduct.id,
+              relationship_type: relationshipType ? relationshipType.trim() : 'Relacionado',
+              sort_order: i + 1
+            }, { transaction });
+            createdCount++;
+          }
+        }
+      }
+    }
+    
+    return createdCount;
+  }
+
   // Validar datos antes de importar
   validateImportData(data) {
     const errors = [];
     
+    console.log('=== VALIDACIÓN DE DATOS ===');
+    console.log('Total de filas a validar:', data.length);
+    console.log('Primera fila:', data[0]);
+    console.log('Claves de la primera fila:', Object.keys(data[0]));
+    
     data.forEach((row, index) => {
       const rowNumber = index + 2;
+      
+      // console.log(`Validando fila ${rowNumber}:`, row);
+      // console.log(`SKU en fila ${rowNumber}:`, row.sku);
       
       if (!row.sku) {
         errors.push(`Fila ${rowNumber}: SKU es requerido`);
@@ -274,12 +366,23 @@ class ImportService {
         errors.push(`Fila ${rowNumber}: Categoría es requerida`);
       }
       
-      if (row.precio && isNaN(parseFloat(row.precio))) {
-        errors.push(`Fila ${rowNumber}: Precio debe ser un número válido`);
+      console.log(`Fila ${rowNumber} - Precio: "${row.precio}" (tipo: ${typeof row.precio})`);
+      console.log(`Fila ${rowNumber} - Stock: "${row.stock}" (tipo: ${typeof row.stock})`);
+      
+      // Validar precio solo si existe
+      if (row.precio !== undefined && row.precio !== null && row.precio !== '') {
+        const precioNum = parseFloat(row.precio);
+        if (isNaN(precioNum)) {
+          errors.push(`Fila ${rowNumber}: Precio debe ser un número válido (valor: "${row.precio}")`);
+        }
       }
       
-      if (row.stock && isNaN(parseInt(row.stock))) {
-        errors.push(`Fila ${rowNumber}: Stock debe ser un número entero válido`);
+      // Validar stock solo si existe
+      if (row.stock !== undefined && row.stock !== null && row.stock !== '') {
+        const stockNum = parseInt(row.stock);
+        if (isNaN(stockNum)) {
+          errors.push(`Fila ${rowNumber}: Stock debe ser un número entero válido (valor: "${row.stock}")`);
+        }
       }
     });
     

@@ -16,7 +16,7 @@ const upload = multer({
     }
   },
   limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB máximo
+    fileSize: 50 * 1024 * 1024 // 50MB máximo
   }
 });
 
@@ -38,32 +38,74 @@ const importSystemData = async (req, res, next) => {
 
     // Crear stream desde el buffer del archivo
     const fileBuffer = req.file.buffer;
+    
+    // Debug: Ver el contenido del archivo
+    console.log('=== DEBUG ARCHIVO ===');
+    console.log('Tamaño del archivo:', fileBuffer.length, 'bytes');
+    console.log('Primeros 200 caracteres del archivo:', fileBuffer.toString('utf8').substring(0, 200));
+    console.log('Tipo de archivo:', req.file.mimetype);
+    console.log('Nombre del archivo:', req.file.originalname);
+    console.log('========================');
+    
     const stream = Readable.from(fileBuffer);
 
     // Procesar archivo CSV
     stream
-      .pipe(csv())
+      .pipe(csv({
+        separator: ',', // Usar comas como separador (CSV estándar)
+        headers: true,  // Primera fila contiene headers
+        skipEmptyLines: true,
+        strict: false,  // Ser más flexible con el formato
+        skipLinesWithEmptyValues: false
+      }))
       .on('data', (data) => {
-        // Normalizar los datos (convertir nombres de columnas)
-        const normalizedData = {
-          sku: data.sku || data.SKU,
-          nombre: data.nombre || data.Nombre || data.name || data.Name,
-          descripcion: data.descripcion || data.Descripcion || data.description || data.Description,
-          marca: data.marca || data.Marca || data.brand || data.Brand,
-          categoria: data.categoria || data.Categoria || data.category || data.Category,
-          subcategoria: data.subcategoria || data.Subcategoria || data.subcategory || data.Subcategory,
-          precio: data.precio || data.Precio || data.price || data.Price,
-          stock: data.stock || data.Stock,
-          stock_minimo: data.stock_minimo || data['stock_minimo'] || data['Stock Minimo'] || data['stock_minimo'],
-          peso: data.peso || data.Peso || data.weight || data.Weight,
-          dimensiones: data.dimensiones || data.Dimensiones || data.dimensions || data.Dimensions,
-          imagen: data.imagen || data.Imagen || data.image || data.Image,
-          // NUEVOS CAMPOS PARA CARACTERÍSTICAS Y APLICACIONES
-          caracteristicas: data.caracteristicas || data.Caracteristicas || data.features || data.Features || data.caracteristicas || data.Caracteristicas,
-          aplicaciones: data.aplicaciones || data.Aplicaciones || data.applications || data.Applications || data.aplicaciones || data.Aplicaciones
-        };
+        // Debug: Log de los datos recibidos
+        console.log('=== DATOS CSV RECIBIDOS ===');
+        console.log('Datos completos:', data);
+        console.log('Claves disponibles:', Object.keys(data));
+        console.log('===========================');
+        
+        // Detectar si es fila de headers por el contenido (si contiene palabras como 'sku', 'nombre', etc.)
+        const isHeaderRow = Object.values(data).some(value => 
+          typeof value === 'string' && 
+          ['sku', 'nombre', 'descripcion', 'marca', 'categoria'].some(header => 
+            value.toLowerCase().includes(header.toLowerCase())
+          )
+        );
+        
+        if (isHeaderRow) {
+          console.log('Fila de headers detectada, saltando:', data);
+          // NO agregar a results, pero continuar procesando
+        } else {
+          console.log('Procesando fila de datos:', data);
+          
+          // Normalizar los datos directamente desde las claves _0, _1, etc.
+          const normalizedData = {
+            sku: data._0 || '',
+            nombre: data._1 || '',
+            descripcion: data._2 || '',
+            marca: data._3 || '',
+            categoria: data._4 || '',
+            subcategoria: data._5 || '',
+            precio: data._6 || '',
+            stock: data._7 || '',
+            stock_minimo: data._8 || '',
+            peso: data._9 || '',
+            dimensiones: data._10 || '',
+            imagen: data._11 || '',
+            // NUEVOS CAMPOS PARA CARACTERÍSTICAS Y APLICACIONES
+            caracteristicas: data._12 || '',
+            aplicaciones: data._13 || '',
+            // NUEVOS CAMPOS PARA ACCESORIOS Y PRODUCTOS RELACIONADOS
+            accesorios: data._14 || '',
+            productos_relacionados: data._15 || ''
+          };
 
-        results.push(normalizedData);
+          // Debug: Log de los datos normalizados
+          console.log('Datos normalizados:', normalizedData);
+
+          results.push(normalizedData);
+        }
       })
       .on('end', async () => {
         try {
@@ -133,28 +175,55 @@ const previewImportData = async (req, res, next) => {
 
     // Procesar archivo CSV para previsualización
     stream
-      .pipe(csv())
+      .pipe(csv({
+        separator: ',', // Usar comas como separador (CSV estándar)
+        headers: true,  // Primera fila contiene headers
+        skipEmptyLines: true
+      }))
       .on('data', (data) => {
-        // Normalizar los datos
-        const normalizedData = {
-          sku: data.sku || data.SKU,
-          nombre: data.nombre || data.Nombre || data.name || data.Name,
-          descripcion: data.descripcion || data.Descripcion || data.description || data.Description,
-          marca: data.marca || data.Marca || data.brand || data.Brand,
-          categoria: data.categoria || data.Categoria || data.category || data.Category,
-          subcategoria: data.subcategoria || data.Subcategoria || data.subcategory || data.Subcategory,
-          precio: data.precio || data.Precio || data.price || data.Price,
-          stock: data.stock || data.Stock,
-          stock_minimo: data.stock_minimo || data['stock_minimo'] || data['Stock Minimo'] || data['stock_minimo'],
-          peso: data.peso || data.Peso || data.weight || data.Weight,
-          dimensiones: data.dimensiones || data.Dimensiones || data.dimensions || data.Dimensions,
-          imagen: data.imagen || data.Imagen || data.image || data.Image,
-          // NUEVOS CAMPOS PARA CARACTERÍSTICAS Y APLICACIONES
-          caracteristicas: data.caracteristicas || data.Caracteristicas || data.features || data.Features || data.caracteristicas || data.Caracteristicas,
-          aplicaciones: data.aplicaciones || data.Aplicaciones || data.applications || data.Applications || data.aplicaciones || data.Aplicaciones
-        };
+        console.log('=== PREVIEW CSV RECIBIDOS ===');
+        console.log('Datos completos:', data);
+        console.log('Claves disponibles:', Object.keys(data));
+        console.log('=============================');
+        
+        // Detectar si es fila de headers por el contenido (si contiene palabras como 'sku', 'nombre', etc.)
+        const isHeaderRow = Object.values(data).some(value => 
+          typeof value === 'string' && 
+          ['sku', 'nombre', 'descripcion', 'marca', 'categoria'].some(header => 
+            value.toLowerCase().includes(header.toLowerCase())
+          )
+        );
+        
+        if (isHeaderRow) {
+          console.log('Fila de headers detectada, saltando:', data);
+          // NO agregar a results, pero continuar procesando
+        } else {
+          console.log('Procesando fila de datos:', data);
+          
+          // Normalizar los datos directamente desde las claves _0, _1, etc.
+          const normalizedData = {
+            sku: data._0 || '',
+            nombre: data._1 || '',
+            descripcion: data._2 || '',
+            marca: data._3 || '',
+            categoria: data._4 || '',
+            subcategoria: data._5 || '',
+            precio: data._6 || '',
+            stock: data._7 || '',
+            stock_minimo: data._8 || '',
+            peso: data._9 || '',
+            dimensiones: data._10 || '',
+            imagen: data._11 || '',
+            // NUEVOS CAMPOS PARA CARACTERÍSTICAS Y APLICACIONES
+            caracteristicas: data._12 || '',
+            aplicaciones: data._13 || '',
+            // NUEVOS CAMPOS PARA ACCESORIOS Y PRODUCTOS RELACIONADOS
+            accesorios: data._14 || '',
+            productos_relacionados: data._15 || ''
+          };
 
-        results.push(normalizedData);
+          results.push(normalizedData);
+        }
       })
       .on('end', () => {
         // Validar datos para previsualización

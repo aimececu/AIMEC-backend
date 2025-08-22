@@ -213,6 +213,23 @@ const getProductStats = async (req, res, next) => {
   }
 };
 
+// Exportar productos con todas sus relaciones
+const exportProductsWithRelations = async (req, res, next) => {
+  try {
+    console.log('Exportando productos con relaciones...');
+    const products = await ProductService.exportProductsWithRelations();
+    console.log(`Exportación completada: ${products.length} productos`);
+    
+    res.json({
+      success: true,
+      data: products
+    });
+  } catch (error) {
+    console.error('Error exportando productos con relaciones:', error);
+    next(error);
+  }
+};
+
 module.exports = {
   getAllProducts,
   getProductById,
@@ -222,5 +239,6 @@ module.exports = {
   searchProducts,
   getProductsByCategory,
   getProductsByBrand,
-  getProductStats
+  getProductStats,
+  exportProductsWithRelations
 }; 
