@@ -93,7 +93,7 @@ const updateProduct = async (req, res, next) => {
     const cleanedData = { ...productData };
     
     // Convertir campos vacíos a null para campos opcionales
-    const optionalFields = ['brand_id', 'category_id', 'subcategory_id', 'description', 'short_description', 'main_image', 'dimensions'];
+    const optionalFields = ['brand_id', 'category_id', 'subcategory_id', 'description', 'short_description', 'main_image', 'dimensions', 'voltaje', 'frame_size'];
     optionalFields.forEach(field => {
       if (cleanedData[field] === '') {
         cleanedData[field] = null;
@@ -101,7 +101,7 @@ const updateProduct = async (req, res, next) => {
     });
     
     // Convertir campos numéricos vacíos a null
-    const numericFields = ['price', 'stock_quantity', 'min_stock_level', 'weight'];
+    const numericFields = ['price', 'stock_quantity', 'min_stock_level', 'weight', 'potencia_kw'];
     numericFields.forEach(field => {
       if (cleanedData[field] === '') {
         cleanedData[field] = null;

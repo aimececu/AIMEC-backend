@@ -194,6 +194,7 @@ class ImportService {
 
     const productDataToSave = {
       sku: productData.sku,
+      sku_ec: productData.sku_ec || productData.sku, // Usar SKU como fallback si no hay SKU EC
       name: productData.nombre,
       description: productData.descripcion,
       brand_id: brandId,
@@ -203,6 +204,9 @@ class ImportService {
       stock_quantity: parseInt(productData.stock) || 0,
       min_stock_level: parseInt(productData.stock_minimo) || 5,
       weight: productData.peso ? parseFloat(productData.peso) : null,
+      potencia_kw: productData.potencia_kw ? parseFloat(productData.potencia_kw) : null,
+      voltaje: productData.voltaje || null,
+      frame_size: productData.frame_size || null,
       dimensions: productData.dimensiones || null,
       main_image: productData.imagen || null,
       is_active: true

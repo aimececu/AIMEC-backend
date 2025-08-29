@@ -26,6 +26,29 @@ const Product = sequelize.define('Product', {
       notEmpty: true
     }
   },
+  sku_ec: {
+    type: DataTypes.STRING(100),
+    allowNull: false,
+    unique: true,
+    validate: {
+      notEmpty: true
+    }
+  },
+  potencia_kw: {
+    type: DataTypes.DECIMAL(8, 2),
+    allowNull: true,
+    comment: 'Potencia en kilowatts (ej: 0.37)'
+  },
+  voltaje: {
+    type: DataTypes.STRING(100),
+    allowNull: true,
+    comment: 'Voltaje del producto (ej: 1AC 200-400 V)'
+  },
+  frame_size: {
+    type: DataTypes.STRING(50),
+    allowNull: true,
+    comment: 'Tamaño del frame (ej: FSAA)'
+  },
   brand_id: {
     type: DataTypes.INTEGER,
     allowNull: true, // Cambiar a true para permitir productos sin marca

@@ -26,8 +26,9 @@ class ProductService {
 
       // Atributos específicos del producto
       const productAttributes = [
-        'id', 'sku', 'name', 'description', 'price', 'stock_quantity', 
+        'id', 'sku', 'sku_ec', 'name', 'description', 'price', 'stock_quantity', 
         'min_stock_level', 'weight', 'dimensions', 'main_image', 'is_active',
+        'potencia_kw', 'voltaje', 'frame_size',
         'brand_id', 'category_id', 'subcategory_id', 'created_at', 'updated_at'
       ];
 
@@ -167,8 +168,9 @@ class ProductService {
           }
         ],
         attributes: [
-          'id', 'sku', 'name', 'description', 'price', 'stock_quantity', 
+          'id', 'sku', 'sku_ec', 'name', 'description', 'price', 'stock_quantity', 
           'min_stock_level', 'weight', 'dimensions', 'main_image', 'is_active',
+          'potencia_kw', 'voltaje', 'frame_size',
           'brand_id', 'category_id', 'subcategory_id', 'created_at', 'updated_at'
         ]
       });
@@ -215,7 +217,7 @@ class ProductService {
     
     // Campos numéricos que pueden ser null
     const numericFields = [
-      'price', 'stock_quantity', 'min_stock_level', 'weight'
+      'price', 'stock_quantity', 'min_stock_level', 'weight', 'potencia_kw'
     ];
     
     // Campos de ID que pueden ser null (opcionales)
@@ -476,8 +478,9 @@ class ProductService {
           }
         ],
         attributes: [
-          'id', 'sku', 'name', 'description', 'price', 'stock_quantity', 
-          'min_stock_level', 'weight', 'dimensions', 'main_image'
+          'id', 'sku', 'sku_ec', 'name', 'description', 'price', 'stock_quantity', 
+          'min_stock_level', 'weight', 'dimensions', 'main_image',
+          'potencia_kw', 'voltaje', 'frame_size'
         ],
         order: [['id', 'ASC']]
       });

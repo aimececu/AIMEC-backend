@@ -1,6 +1,6 @@
 const ImportService = require('../services/ImportService');
 const multer = require('multer');
-const csv = require('csv-parser');
+const ExcelJS = require('exceljs');
 const { Readable } = require('stream');
 
 // Configuración de multer para archivos en memoria
@@ -32,73 +32,81 @@ const importSystemData = async (req, res, next) => {
 
     console.log('Procesando archivo de importación:', req.file.originalname);
 
-    // Procesar archivo CSV directamente desde el buffer
+    // Procesar archivo Excel directamente desde el buffer
     const results = [];
     const errors = [];
 
-    // Crear stream desde el buffer del archivo
+    // Obtener el buffer del archivo
     const fileBuffer = req.file.buffer;
-    
-    // Debug: Ver el contenido del archivo
-    console.log('=== DEBUG ARCHIVO ===');
-    console.log('Tamaño del archivo:', fileBuffer.length, 'bytes');
-    console.log('Primeros 200 caracteres del archivo:', fileBuffer.toString('utf8').substring(0, 200));
-    console.log('Tipo de archivo:', req.file.mimetype);
-    console.log('Nombre del archivo:', req.file.originalname);
-    console.log('========================');
-    
-    const stream = Readable.from(fileBuffer);
 
-    // Procesar archivo CSV
-    stream
-      .pipe(csv({
-        separator: ',', // Usar comas como separador (CSV estándar)
-        headers: true,  // Primera fila contiene headers
-        skipEmptyLines: true,
-        strict: false,  // Ser más flexible con el formato
-        skipLinesWithEmptyValues: false
-      }))
-      .on('data', (data) => {
-        // Debug: Log de los datos recibidos
-        console.log('=== DATOS CSV RECIBIDOS ===');
-        console.log('Datos completos:', data);
-        console.log('Claves disponibles:', Object.keys(data));
-        console.log('===========================');
+    try {
+      // Leer el archivo Excel con ExcelJS
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(fileBuffer);
+      
+      // Obtener la primera hoja
+      const worksheet = workbook.getWorksheet(1);
+      if (!worksheet) {
+        throw new Error('No se encontró ninguna hoja en el archivo Excel');
+      }
+      
+      console.log('=== DEBUG ARCHIVO EXCEL ===');
+      console.log('Nombre de la hoja:', worksheet.name);
+      console.log('Total de filas en Excel:', worksheet.rowCount);
+      console.log('Filas de datos esperadas:', worksheet.rowCount - 1); // -1 por la fila de headers
+      console.log('============================');
+
+      // Obtener headers de la primera fila
+      const headerRow = worksheet.getRow(1);
+      const headers = [];
+      headerRow.eachCell((cell, colNumber) => {
+        headers[colNumber - 1] = cell.value ? cell.value.toString().toLowerCase().trim() : '';
+      });
+
+      console.log('Headers detectados:', headers);
+
+      // Procesar filas de datos (empezar desde la fila 2)
+      for (let rowNumber = 2; rowNumber <= worksheet.rowCount; rowNumber++) {
+        const row = worksheet.getRow(rowNumber);
+        const rowData = {};
         
-        // Detectar si es fila de headers por el contenido (si contiene palabras como 'sku', 'nombre', etc.)
-        const isHeaderRow = Object.values(data).some(value => 
-          typeof value === 'string' && 
-          ['sku', 'nombre', 'descripcion', 'marca', 'categoria'].some(header => 
-            value.toLowerCase().includes(header.toLowerCase())
-          )
-        );
+        // Mapear cada celda a su header correspondiente
+        row.eachCell((cell, colNumber) => {
+          const header = headers[colNumber - 1];
+          if (header) {
+            rowData[header] = cell.value ? cell.value.toString() : '';
+          }
+        });
         
-        if (isHeaderRow) {
-          console.log('Fila de headers detectada, saltando:', data);
-          // NO agregar a results, pero continuar procesando
-        } else {
-          console.log('Procesando fila de datos:', data);
+        // Solo agregar filas que tengan SKU
+        if (rowData.sku && rowData.sku.trim()) {
+          console.log(`Procesando fila ${rowNumber}:`, rowData);
           
-          // Normalizar los datos directamente desde las claves _0, _1, etc.
+          // Normalizar los datos usando nombres de columnas
           const normalizedData = {
-            sku: data._0 || '',
-            nombre: data._1 || '',
-            descripcion: data._2 || '',
-            marca: data._3 || '',
-            categoria: data._4 || '',
-            subcategoria: data._5 || '',
-            precio: data._6 || '',
-            stock: data._7 || '',
-            stock_minimo: data._8 || '',
-            peso: data._9 || '',
-            dimensiones: data._10 || '',
-            imagen: data._11 || '',
+            sku: rowData.sku || '',
+            nombre: rowData.nombre || '',
+            descripcion: rowData.descripcion || '',
+            marca: rowData.marca || '',
+            categoria: rowData.categoria || '',
+            subcategoria: rowData.subcategoria || '',
+            precio: rowData.precio || '',
+            stock: rowData.stock || '',
+            stock_minimo: rowData.stock_minimo || '',
+            peso: rowData.peso || '',
+            dimensiones: rowData.dimensiones || '',
+            imagen: rowData.imagen || '',
             // NUEVOS CAMPOS PARA CARACTERÍSTICAS Y APLICACIONES
-            caracteristicas: data._12 || '',
-            aplicaciones: data._13 || '',
+            caracteristicas: rowData.caracteristicas || '',
+            aplicaciones: rowData.aplicaciones || '',
             // NUEVOS CAMPOS PARA ACCESORIOS Y PRODUCTOS RELACIONADOS
-            accesorios: data._14 || '',
-            productos_relacionados: data._15 || ''
+            accesorios: rowData.accesorios || '',
+            productos_relacionados: rowData.productos_relacionados || '',
+            // NUEVOS CAMPOS TÉCNICOS
+            sku_ec: rowData.sku_ec || '',
+            potencia_kw: rowData.potencia_kw || '',
+            voltaje: rowData.voltaje || '',
+            frame_size: rowData.frame_size || ''
           };
 
           // Debug: Log de los datos normalizados
@@ -106,47 +114,51 @@ const importSystemData = async (req, res, next) => {
 
           results.push(normalizedData);
         }
-      })
-      .on('end', async () => {
-        try {
-          // Validar datos
-          const validationErrors = ImportService.validateImportData(results);
-          if (validationErrors.length > 0) {
-            return res.json({
-              success: false,
-              error: 'Errores de validación en los datos',
-              details: validationErrors
-            });
-          }
+      }
 
-          // Importar datos
-          const importResults = await ImportService.importSystemData(results);
+      console.log('Total de filas procesadas:', results.length);
+      console.log('Primeras 3 filas:', results.slice(0, 3));
+      console.log('Nombres de columnas detectados:', Object.keys(results[0] || {}));
 
-          console.log('Importación completada:', importResults);
+      console.log('=== RESUMEN DE PROCESAMIENTO ===');
+      console.log('Total de filas en Excel:', worksheet.rowCount);
+      console.log('Filas de headers:', 1);
+      console.log('Filas de datos esperadas:', worksheet.rowCount - 1);
+      console.log('Filas procesadas exitosamente:', results.length);
+      console.log('Filas saltadas (sin SKU):', (worksheet.rowCount - 1) - results.length);
+      console.log('Primeras 3 filas:', results.slice(0, 3));
+      console.log('Nombres de columnas detectados:', Object.keys(results[0] || {}));
+      console.log('=====================================');
 
-          res.json({
-            success: true,
-            message: 'Importación completada exitosamente',
-            data: importResults
-          });
-
-        } catch (error) {
-          console.error('Error durante la importación:', error);
-          res.status(500).json({
-            success: false,
-            error: 'Error durante la importación',
-            message: error.message
-          });
-        }
-      })
-      .on('error', (error) => {
-        console.error('Error procesando archivo:', error);
-        res.status(500).json({
+      // Validar datos
+      const validationErrors = ImportService.validateImportData(results);
+      if (validationErrors.length > 0) {
+        return res.json({
           success: false,
-          error: 'Error procesando archivo',
-          message: error.message
+          error: 'Errores de validación en los datos',
+          details: validationErrors
         });
+      }
+
+      // Importar datos
+      const importResults = await ImportService.importSystemData(results);
+
+      console.log('Importación completada:', importResults);
+
+      res.json({
+        success: true,
+        message: 'Importación completada exitosamente',
+        data: importResults
       });
+
+    } catch (error) {
+      console.error('Error procesando archivo Excel:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Error procesando archivo Excel',
+        message: error.message
+      });
+    }
 
   } catch (error) {
     console.error('Error en importSystemData:', error);
@@ -169,84 +181,114 @@ const previewImportData = async (req, res, next) => {
     const results = [];
     const errors = [];
 
-    // Crear stream desde el buffer del archivo
+    // Obtener el buffer del archivo
     const fileBuffer = req.file.buffer;
-    const stream = Readable.from(fileBuffer);
 
-    // Procesar archivo CSV para previsualización
-    stream
-      .pipe(csv({
-        separator: ',', // Usar comas como separador (CSV estándar)
-        headers: true,  // Primera fila contiene headers
-        skipEmptyLines: true
-      }))
-      .on('data', (data) => {
-        console.log('=== PREVIEW CSV RECIBIDOS ===');
-        console.log('Datos completos:', data);
-        console.log('Claves disponibles:', Object.keys(data));
-        console.log('=============================');
+    try {
+      // Leer el archivo Excel con ExcelJS
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(fileBuffer);
+      
+      // Obtener la primera hoja
+      const worksheet = workbook.getWorksheet(1);
+      if (!worksheet) {
+        throw new Error('No se encontró ninguna hoja en el archivo Excel');
+      }
+      
+      console.log('=== PREVIEW EXCEL ===');
+      console.log('Nombre de la hoja:', worksheet.name);
+      console.log('Total de filas en Excel:', worksheet.rowCount);
+      console.log('Filas de datos esperadas:', worksheet.rowCount - 1); // -1 por la fila de headers
+      console.log('============================');
+
+      // Obtener headers de la primera fila
+      const headerRow = worksheet.getRow(1);
+      const headers = [];
+      headerRow.eachCell((cell, colNumber) => {
+        headers[colNumber - 1] = cell.value ? cell.value.toString().toLowerCase().trim() : '';
+      });
+
+      console.log('Headers detectados:', headers);
+
+      // Procesar filas de datos (empezar desde la fila 2)
+      for (let rowNumber = 2; rowNumber <= worksheet.rowCount; rowNumber++) {
+        const row = worksheet.getRow(rowNumber);
+        const rowData = {};
         
-        // Detectar si es fila de headers por el contenido (si contiene palabras como 'sku', 'nombre', etc.)
-        const isHeaderRow = Object.values(data).some(value => 
-          typeof value === 'string' && 
-          ['sku', 'nombre', 'descripcion', 'marca', 'categoria'].some(header => 
-            value.toLowerCase().includes(header.toLowerCase())
-          )
-        );
+        // Mapear cada celda a su header correspondiente
+        row.eachCell((cell, colNumber) => {
+          const header = headers[colNumber - 1];
+          if (header) {
+            rowData[header] = cell.value ? cell.value.toString() : '';
+          }
+        });
         
-        if (isHeaderRow) {
-          console.log('Fila de headers detectada, saltando:', data);
-          // NO agregar a results, pero continuar procesando
-        } else {
-          console.log('Procesando fila de datos:', data);
+        // Solo agregar filas que tengan SKU
+        if (rowData.sku && rowData.sku.trim()) {
+          console.log(`Procesando fila ${rowNumber}:`, rowData);
           
-          // Normalizar los datos directamente desde las claves _0, _1, etc.
+          // Normalizar los datos usando nombres de columnas
           const normalizedData = {
-            sku: data._0 || '',
-            nombre: data._1 || '',
-            descripcion: data._2 || '',
-            marca: data._3 || '',
-            categoria: data._4 || '',
-            subcategoria: data._5 || '',
-            precio: data._6 || '',
-            stock: data._7 || '',
-            stock_minimo: data._8 || '',
-            peso: data._9 || '',
-            dimensiones: data._10 || '',
-            imagen: data._11 || '',
+            sku: rowData.sku || '',
+            nombre: rowData.nombre || '',
+            descripcion: rowData.descripcion || '',
+            marca: rowData.marca || '',
+            categoria: rowData.categoria || '',
+            subcategoria: rowData.subcategoria || '',
+            precio: rowData.precio || '',
+            stock: rowData.stock || '',
+            stock_minimo: rowData.stock_minimo || '',
+            peso: rowData.peso || '',
+            dimensiones: rowData.dimensiones || '',
+            imagen: rowData.imagen || '',
             // NUEVOS CAMPOS PARA CARACTERÍSTICAS Y APLICACIONES
-            caracteristicas: data._12 || '',
-            aplicaciones: data._13 || '',
+            caracteristicas: rowData.caracteristicas || '',
+            aplicaciones: rowData.aplicaciones || '',
             // NUEVOS CAMPOS PARA ACCESORIOS Y PRODUCTOS RELACIONADOS
-            accesorios: data._14 || '',
-            productos_relacionados: data._15 || ''
+            accesorios: rowData.accesorios || '',
+            productos_relacionados: rowData.productos_relacionados || '',
+            // NUEVOS CAMPOS TÉCNICOS
+            sku_ec: rowData.sku_ec || '',
+            potencia_kw: rowData.potencia_kw || '',
+            voltaje: rowData.voltaje || '',
+            frame_size: rowData.frame_size || ''
           };
 
           results.push(normalizedData);
         }
-      })
-      .on('end', () => {
-        // Validar datos para previsualización
-        const validationErrors = ImportService.validateImportData(results);
+      }
 
-        res.json({
-          success: true,
-          data: {
-            preview: results.slice(0, 10), // Solo las primeras 10 filas
-            total_rows: results.length,
-            validation_errors: validationErrors,
-            can_import: validationErrors.length === 0
-          }
-        });
-      })
-      .on('error', (error) => {
-        console.error('Error previsualizando archivo:', error);
-        res.status(500).json({
-          success: false,
-          error: 'Error previsualizando archivo',
-          message: error.message
-        });
+      console.log('=== RESUMEN DE PREVISUALIZACIÓN ===');
+      console.log('Total de filas en Excel:', worksheet.rowCount);
+      console.log('Filas de headers:', 1);
+      console.log('Filas de datos esperadas:', worksheet.rowCount - 1);
+      console.log('Filas procesadas exitosamente:', results.length);
+      console.log('Filas saltadas (sin SKU):', (worksheet.rowCount - 1) - results.length);
+      console.log('Primeras 3 filas:', results.slice(0, 3));
+      console.log('Nombres de columnas detectados:', Object.keys(results[0] || {}));
+      console.log('========================================');
+
+      // Validar datos para previsualización
+      const validationErrors = ImportService.validateImportData(results);
+
+      res.json({
+        success: true,
+        data: {
+          preview: results, // Mostrar TODOS los productos
+          total_rows: results.length,
+          validation_errors: validationErrors,
+          can_import: validationErrors.length === 0
+        }
       });
+
+    } catch (error) {
+      console.error('Error previsualizando archivo Excel:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Error previsualizando archivo Excel',
+        message: error.message
+      });
+    }
 
   } catch (error) {
     console.error('Error en previewImportData:', error);
