@@ -3,6 +3,42 @@ const multer = require('multer');
 const ExcelJS = require('exceljs');
 const { Readable } = require('stream');
 
+// Función para procesar valores de celdas del Excel
+const processCellValue = (cell) => {
+  if (!cell.value) return '';
+  
+  // Si es un objeto, extraer información relevante
+  if (typeof cell.value === 'object') {
+    // Para hipervínculos
+    if (cell.value.hyperlink) {
+      return cell.value.hyperlink || '';
+    }
+    
+    // Para imágenes o archivos
+    if (cell.value.text) {
+      return cell.value.text || '';
+    }
+    
+    // Para otros objetos, intentar extraer el valor principal
+    if (cell.value.richText) {
+      return cell.value.richText.map(rt => rt.text).join('') || '';
+    }
+    
+    // Para fórmulas
+    if (cell.value.formula) {
+      return cell.value.result || '';
+    }
+    
+    // Si no se puede procesar, convertir a string y limpiar
+    const objString = JSON.stringify(cell.value);
+    console.log(`⚠️ Celda con objeto complejo: ${objString}`);
+    return '';
+  }
+  
+  // Para valores simples, convertir a string
+  return cell.value.toString().trim();
+};
+
 // Configuración de multer para archivos en memoria
 const upload = multer({
   storage: multer.memoryStorage(), // Almacenar en memoria en lugar de disco
@@ -74,7 +110,7 @@ const importSystemData = async (req, res, next) => {
         row.eachCell((cell, colNumber) => {
           const header = headers[colNumber - 1];
           if (header) {
-            rowData[header] = cell.value ? cell.value.toString() : '';
+            rowData[header] = processCellValue(cell);
           }
         });
         
@@ -219,7 +255,7 @@ const previewImportData = async (req, res, next) => {
         row.eachCell((cell, colNumber) => {
           const header = headers[colNumber - 1];
           if (header) {
-            rowData[header] = cell.value ? cell.value.toString() : '';
+            rowData[header] = processCellValue(cell);
           }
         });
         
