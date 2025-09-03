@@ -230,6 +230,27 @@ const exportProductsWithRelations = async (req, res, next) => {
   }
 };
 
+// Limpiar todos los productos (soft delete)
+const clearAllProducts = async (req, res, next) => {
+  try {
+    console.log('Iniciando limpieza de todos los productos...');
+    const result = await ProductService.clearAllProducts();
+    console.log(`Limpieza completada: ${result.deleted_count} productos eliminados`);
+    
+    res.json({
+      success: true,
+      message: `Se eliminaron ${result.deleted_count} productos del sistema`,
+      data: {
+        deleted_count: result.deleted_count,
+        deleted_at: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    console.error('Error limpiando productos:', error);
+    next(error);
+  }
+};
+
 module.exports = {
   getAllProducts,
   getProductById,
@@ -240,5 +261,6 @@ module.exports = {
   getProductsByCategory,
   getProductsByBrand,
   getProductStats,
-  exportProductsWithRelations
+  exportProductsWithRelations,
+  clearAllProducts
 }; 

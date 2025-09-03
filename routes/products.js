@@ -168,6 +168,42 @@ router.get('/export', productController.exportProductsWithRelations);
 
 /**
  * @swagger
+ * /api/products/clear:
+ *   delete:
+ *     summary: Limpiar todos los productos
+ *     description: Elimina todos los productos del sistema (soft delete). Requiere autenticación de administrador.
+ *     tags: [Productos]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Productos eliminados exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     deleted_count:
+ *                       type: integer
+ *                     deleted_at:
+ *                       type: string
+ *                       format: date-time
+ *       401:
+ *         description: No autorizado
+ *       403:
+ *         description: Acceso denegado - se requiere rol de administrador
+ */
+router.delete('/clear', verifySession, requireAdmin, productController.clearAllProducts);
+
+/**
+ * @swagger
  * /api/products/search:
  *   get:
  *     summary: Buscar productos

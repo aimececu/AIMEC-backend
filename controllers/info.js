@@ -11,13 +11,15 @@ const getSystemStats = async (req, res, next) => {
     // Obtener estadísticas de marcas
     const totalBrands = await BrandService.getBrandCount();
 
-    // Obtener estadísticas de categorías
-    const totalCategories = await CategoryService.getCategoryCount();
+    // Obtener estadísticas de categorías y subcategorías
+    const categoryStats = await CategoryService.getCategoryStats();
+
 
     const stats = {
       total_products: totalProducts,
       total_brands: totalBrands,
-      total_categories: totalCategories,
+      total_categories: categoryStats.totalCategories,
+      total_subcategories: categoryStats.totalSubcategories,
     };
 
     res.json({

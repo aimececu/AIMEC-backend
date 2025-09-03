@@ -79,13 +79,21 @@ const updateCategory = async (req, res, next) => {
 const deleteCategory = async (req, res, next) => {
   try {
     const categoryId = parseInt(req.params.id);
-    await CategoryService.deleteCategory(categoryId);
+    console.log('=== ELIMINANDO CATEGORÍA ===');
+    console.log('Category ID:', categoryId);
+    console.log('Request params:', req.params);
+    
+    const result = await CategoryService.deleteCategory(categoryId);
+    console.log('Resultado de eliminación:', result);
     
     res.json({
       success: true,
       message: "Categoría eliminada correctamente"
     });
   } catch (error) {
+    console.error('Error en deleteCategory:', error);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
     next(error);
   }
 };

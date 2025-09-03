@@ -28,16 +28,14 @@ const Product = sequelize.define('Product', {
   },
   sku_ec: {
     type: DataTypes.STRING(100),
-    allowNull: false,
+    allowNull: true,
     unique: true,
-    validate: {
-      notEmpty: true
-    }
+    comment: 'SKU alternativo o de exportación (opcional)'
   },
   potencia_kw: {
-    type: DataTypes.DECIMAL(8, 2),
+    type: DataTypes.STRING(100),
     allowNull: true,
-    comment: 'Potencia en kilowatts (ej: 0.37)'
+    comment: 'Potencia del producto (ej: 0.37 kW, 1.5 HP, etc.)'
   },
   voltaje: {
     type: DataTypes.STRING(100),
@@ -48,6 +46,21 @@ const Product = sequelize.define('Product', {
     type: DataTypes.STRING(50),
     allowNull: true,
     comment: 'Tamaño del frame (ej: FSAA)'
+  },
+  corriente: {
+    type: DataTypes.STRING(100),
+    allowNull: true,
+    comment: 'Corriente del producto (ej: 0.37 A, 1.5-2.2 A, etc.)'
+  },
+  comunicacion: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    comment: 'Tipo de comunicación del producto'
+  },
+  alimentacion: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    comment: 'Tipo de alimentación del producto'
   },
   brand_id: {
     type: DataTypes.INTEGER,
@@ -74,23 +87,24 @@ const Product = sequelize.define('Product', {
     }
   },
   price: {
-    type: DataTypes.DECIMAL(10, 2),
-    allowNull: true, // Cambiar a true para permitir productos sin precio
-    defaultValue: 0.00
+    type: DataTypes.STRING(100),
+    allowNull: true,
+    comment: 'Precio del producto (ej: 262.50, 1,250.00, etc.)'
   },
   stock_quantity: {
-    type: DataTypes.INTEGER,
-    allowNull: true, // Cambiar a true para permitir productos sin stock
-    defaultValue: 0
+    type: DataTypes.STRING(50),
+    allowNull: true,
+    comment: 'Cantidad en stock (ej: 10, 0, Disponible, etc.)'
   },
   min_stock_level: {
-    type: DataTypes.INTEGER,
-    allowNull: true, // Cambiar a true para permitir productos sin nivel mínimo
-    defaultValue: 0
+    type: DataTypes.STRING(50),
+    allowNull: true,
+    comment: 'Nivel mínimo de stock (ej: 5, 0, etc.)'
   },
   weight: {
-    type: DataTypes.DECIMAL(8, 2),
-    allowNull: true
+    type: DataTypes.STRING(100),
+    allowNull: true,
+    comment: 'Peso del producto (ej: 0.5 kg, 1.2 lbs, etc.)'
   },
   dimensions: {
     type: DataTypes.STRING(100),

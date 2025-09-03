@@ -113,23 +113,35 @@ class CategoryService {
   // Eliminar categoría (soft delete)
   async deleteCategory(id) {
     try {
+      console.log('=== CategoryService.deleteCategory ===');
+      console.log('ID recibido:', id);
+      console.log('Tipo de ID:', typeof id);
+      
       const category = await Category.findByPk(id);
+      console.log('Categoría encontrada:', category ? 'Sí' : 'No');
+      
       if (!category) {
         throw new Error('Categoría no encontrada');
       }
 
       // Verificar si tiene productos asociados
+      console.log('Verificando productos asociados...');
       const productCount = await Product.count({
         where: { category_id: id, is_active: true }
       });
+      console.log('Productos asociados encontrados:', productCount);
 
       if (productCount > 0) {
         throw new Error('No se puede eliminar una categoría que tiene productos asociados');
       }
 
+      console.log('Actualizando categoría a is_active: false...');
       await category.update({ is_active: false });
+      console.log('Categoría actualizada exitosamente');
+      
       return { message: 'Categoría eliminada correctamente' };
     } catch (error) {
+      console.error('Error en CategoryService.deleteCategory:', error);
       throw new Error(`Error al eliminar categoría: ${error.message}`);
     }
   }

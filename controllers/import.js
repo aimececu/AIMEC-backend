@@ -1,51 +1,20 @@
-const ImportService = require('../services/ImportService');
 const multer = require('multer');
 const ExcelJS = require('exceljs');
-const { Readable } = require('stream');
+const importService = require('../services/ImportService');
+const { mapColumnValueByConfig } = require('../config/columnMapping');
 
-// Función para procesar valores de celdas del Excel
-const processCellValue = (cell) => {
-  if (!cell.value) return '';
-  
-  // Si es un objeto, extraer información relevante
-  if (typeof cell.value === 'object') {
-    // Para hipervínculos
-    if (cell.value.hyperlink) {
-      return cell.value.hyperlink || '';
-    }
-    
-    // Para imágenes o archivos
-    if (cell.value.text) {
-      return cell.value.text || '';
-    }
-    
-    // Para otros objetos, intentar extraer el valor principal
-    if (cell.value.richText) {
-      return cell.value.richText.map(rt => rt.text).join('') || '';
-    }
-    
-    // Para fórmulas
-    if (cell.value.formula) {
-      return cell.value.result || '';
-    }
-    
-    // Si no se puede procesar, convertir a string y limpiar
-    const objString = JSON.stringify(cell.value);
-    console.log(`⚠️ Celda con objeto complejo: ${objString}`);
-    return '';
-  }
-  
-  // Para valores simples, convertir a string
-  return cell.value.toString().trim();
-};
-
-// Configuración de multer para archivos en memoria
+// Configuración de multer para subir archivos
+const storage = multer.memoryStorage();
 const upload = multer({
-  storage: multer.memoryStorage(), // Almacenar en memoria en lugar de disco
+  storage: storage,
   fileFilter: (req, file, cb) => {
-    if (file.mimetype === 'text/csv' || 
-        file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
-        file.mimetype === 'application/vnd.ms-excel') {
+    const allowedTypes = [
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+      'application/vnd.ms-excel', // .xls
+      'text/csv' // .csv
+    ];
+    
+    if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
       cb(new Error('Solo se permiten archivos CSV y Excel'), false);
@@ -55,6 +24,38 @@ const upload = multer({
     fileSize: 50 * 1024 * 1024 // 50MB máximo
   }
 });
+
+// Función para procesar el valor de una celda
+const processCellValue = (cell) => {
+  if (!cell || cell.value === null || cell.value === undefined) {
+    return '';
+  }
+  
+  if (typeof cell.value === 'object' && cell.value.text) {
+    return cell.value.text.toString().trim();
+  }
+  
+  return cell.value.toString().trim();
+};
+
+// Función para encontrar el valor de una columna usando mapeo inteligente
+const findColumnValue = (rowData, possibleNames) => {
+  for (const name of possibleNames) {
+    // Buscar exacto
+    if (rowData[name] !== undefined && rowData[name] !== null && rowData[name] !== '') {
+      return rowData[name];
+    }
+    
+    // Buscar en minúsculas
+    const lowerName = name.toLowerCase();
+    for (const key of Object.keys(rowData)) {
+      if (key.toLowerCase() === lowerName && rowData[key] !== undefined && rowData[key] !== null && rowData[key] !== '') {
+        return rowData[key];
+      }
+    }
+  }
+  return null;
+};
 
 // Importar datos del sistema
 const importSystemData = async (req, res, next) => {
@@ -68,10 +69,6 @@ const importSystemData = async (req, res, next) => {
 
     console.log('Procesando archivo de importación:', req.file.originalname);
 
-    // Procesar archivo Excel directamente desde el buffer
-    const results = [];
-    const errors = [];
-
     // Obtener el buffer del archivo
     const fileBuffer = req.file.buffer;
 
@@ -80,33 +77,36 @@ const importSystemData = async (req, res, next) => {
       const workbook = new ExcelJS.Workbook();
       await workbook.xlsx.load(fileBuffer);
       
+      console.log('=== DIAGNÓSTICO DEL ARCHIVO EXCEL ===');
+      console.log('Número de hojas encontradas:', workbook.worksheets.length);
+      console.log('Nombres de las hojas:', workbook.worksheets.map(ws => ws.name));
+      
       // Obtener la primera hoja
-      const worksheet = workbook.getWorksheet(1);
+      const worksheet = workbook.worksheets[0];
       if (!worksheet) {
         throw new Error('No se encontró ninguna hoja en el archivo Excel');
       }
       
-      console.log('=== DEBUG ARCHIVO EXCEL ===');
-      console.log('Nombre de la hoja:', worksheet.name);
-      console.log('Total de filas en Excel:', worksheet.rowCount);
-      console.log('Filas de datos esperadas:', worksheet.rowCount - 1); // -1 por la fila de headers
-      console.log('============================');
+      console.log('Hoja seleccionada:', worksheet.name);
+      console.log('=== PROCESANDO EXCEL ===');
+      console.log('Total de filas:', worksheet.rowCount);
 
-      // Obtener headers de la primera fila
+      // Leer headers de la primera fila
       const headerRow = worksheet.getRow(1);
       const headers = [];
       headerRow.eachCell((cell, colNumber) => {
-        headers[colNumber - 1] = cell.value ? cell.value.toString().toLowerCase().trim() : '';
+        headers[colNumber - 1] = cell.value ? cell.value.toString().trim() : '';
       });
 
-      console.log('Headers detectados:', headers);
+      console.log('Headers encontrados:', headers);
 
-      // Procesar filas de datos (empezar desde la fila 2)
+      // Procesar filas de datos
+      const results = [];
       for (let rowNumber = 2; rowNumber <= worksheet.rowCount; rowNumber++) {
         const row = worksheet.getRow(rowNumber);
         const rowData = {};
         
-        // Mapear cada celda a su header correspondiente
+        // Mapear cada celda a su header
         row.eachCell((cell, colNumber) => {
           const header = headers[colNumber - 1];
           if (header) {
@@ -114,95 +114,72 @@ const importSystemData = async (req, res, next) => {
           }
         });
         
-        // Solo agregar filas que tengan SKU
-        if (rowData.sku && rowData.sku.trim()) {
-          console.log(`Procesando fila ${rowNumber}:`, rowData);
+        // Verificar si tiene SKU usando mapeo inteligente
+        const skuValue = findColumnValue(rowData, ['sku', 'SKU', 'Sku']);
+        
+        // Solo procesar filas que tengan SKU
+        if (skuValue && skuValue.toString().trim()) {
+          console.log(`Procesando fila ${rowNumber} - SKU: ${skuValue}`);
           
-          // Normalizar los datos usando nombres de columnas
+          // Normalizar los datos para el servicio
           const normalizedData = {
-            sku: rowData.sku || '',
-            nombre: rowData.nombre || '',
-            descripcion: rowData.descripcion || '',
-            marca: rowData.marca || '',
-            categoria: rowData.categoria || '',
-            subcategoria: rowData.subcategoria || '',
-            precio: rowData.precio || '',
-            stock: rowData.stock || '',
-            stock_minimo: rowData.stock_minimo || '',
-            peso: rowData.peso || '',
-            dimensiones: rowData.dimensiones || '',
-            imagen: rowData.imagen || '',
-            // NUEVOS CAMPOS PARA CARACTERÍSTICAS Y APLICACIONES
-            caracteristicas: rowData.caracteristicas || '',
-            aplicaciones: rowData.aplicaciones || '',
-            // NUEVOS CAMPOS PARA ACCESORIOS Y PRODUCTOS RELACIONADOS
-            accesorios: rowData.accesorios || '',
-            productos_relacionados: rowData.productos_relacionados || '',
-            // NUEVOS CAMPOS TÉCNICOS
-            sku_ec: rowData.sku_ec || '',
-            potencia_kw: rowData.potencia_kw || '',
-            voltaje: rowData.voltaje || '',
-            frame_size: rowData.frame_size || ''
+            sku: findColumnValue(rowData, ['sku', 'SKU', 'Sku']),
+            nombre: findColumnValue(rowData, ['nombre', 'Nombre', 'NOMBRE', 'name', 'Name', 'NAME']),
+            descripcion: findColumnValue(rowData, ['descripcion', 'Descripción', 'descripcion', 'DESCRIPCION', 'description', 'Description', 'DESCRIPTION']),
+            marca: findColumnValue(rowData, ['marca', 'Marca', 'MARCA', 'brand', 'Brand', 'BRAND', 'fabricante', 'Fabricante', 'FABRICANTE']),
+            categoria: findColumnValue(rowData, ['categoria', 'Categoria', 'Categoría', 'CATEGORIA', 'category', 'Category', 'CATEGORY']),
+            subcategoria: findColumnValue(rowData, ['subcategoria', 'Subcategoria', 'Subcategoría', 'SUBCATEGORIA', 'subcategory', 'Subcategory', 'SUBCATEGORY']),
+            precio: findColumnValue(rowData, ['precio', 'Precio', 'PRECIO', 'price', 'Price', 'PRICE']),
+            stock: findColumnValue(rowData, ['stock', 'Stock', 'STOCK', 'cantidad', 'Cantidad', 'CANTIDAD']),
+            stock_minimo: findColumnValue(rowData, ['stock_minimo', 'Stock Mínimo', 'stock minimo', 'Stock Minimo', 'STOCK_MINIMO', 'min_stock', 'Min Stock']),
+            peso: findColumnValue(rowData, ['peso', 'Peso', 'PESO', 'weight', 'Weight', 'WEIGHT']),
+            dimensiones: findColumnValue(rowData, ['dimensiones', 'Dimensiones', 'DIMENSIONES', 'dimensions', 'Dimensions', 'DIMENSIONS']),
+            imagen: findColumnValue(rowData, ['imagen', 'Imagen', 'IMAGEN', 'image', 'Image', 'IMAGE', 'foto', 'Foto', 'FOTO']),
+            sku_ec: findColumnValue(rowData, ['sku_ec', 'SKU_EC', 'Sku_EC', 'sku ec', 'SKU EC']),
+            potencia_kw: findColumnValue(rowData, ['potencia_kw', 'Potencia (kW)', 'potencia', 'Potencia', 'POTENCIA', 'power', 'Power', 'POWER', 'kw', 'KW']),
+            voltaje: findColumnValue(rowData, ['voltaje', 'Voltaje', 'VOLTAJE', 'voltage', 'Voltage', 'VOLTAGE', 'v', 'V']),
+            frame_size: findColumnValue(rowData, ['frame_size', 'Frame Size', 'frame', 'Frame', 'FRAME', 'tamaño', 'Tamaño', 'TAMAÑO']),
+            corriente: findColumnValue(rowData, ['corriente', 'Corriente', 'CORRIENTE', 'current', 'Current', 'CURRENT', 'amperios', 'Amperios', 'AMPERIOS', 'a', 'A']),
+            comunicacion: findColumnValue(rowData, ['comunicacion', 'Comunicación', 'COMUNICACION', 'communication', 'Communication', 'COMMUNICATION', 'protocolo', 'Protocolo', 'PROTOCOLO']),
+            alimentacion: findColumnValue(rowData, ['alimentacion', 'Alimentacion', 'alimentación', 'Alimentación', 'ALIMENTACION', 'power_supply', 'Power Supply', 'POWER_SUPPLY', 'fuente', 'Fuente', 'FUENTE']),
+            caracteristicas: findColumnValue(rowData, ['caracteristicas', 'Características', 'caracteristicas', 'CARACTERISTICAS', 'features', 'Features', 'FEATURES', 'especificaciones', 'Especificaciones', 'ESPECIFICACIONES']),
+            aplicaciones: findColumnValue(rowData, ['aplicaciones', 'Aplicaciones', 'aplicaciones', 'APLICACIONES', 'applications', 'Applications', 'APPLICATIONS', 'usos', 'Usos', 'USOS']),
+            accesorios: findColumnValue(rowData, ['accesorios', 'Accesorios', 'ACCESORIOS', 'accesorios_compatibles', 'Accesorios compatibles', 'accessories', 'Accessories', 'ACCESSORIES', 'compatibles', 'Compatibles', 'COMPATIBLES']),
+            productos_relacionados: findColumnValue(rowData, ['productos_relacionados', 'Productos relacionados', 'equipos_relacionados', 'Equipos relacionados', 'related_products', 'Related Products', 'RELATED_PRODUCTS', 'relacionados', 'Relacionados', 'RELACIONADOS'])
           };
-
-          // Debug: Log de los datos normalizados
-          console.log('Datos normalizados:', normalizedData);
-
+          
           results.push(normalizedData);
         }
       }
 
       console.log('Total de filas procesadas:', results.length);
-      console.log('Primeras 3 filas:', results.slice(0, 3));
-      console.log('Nombres de columnas detectados:', Object.keys(results[0] || {}));
 
-      console.log('=== RESUMEN DE PROCESAMIENTO ===');
-      console.log('Total de filas en Excel:', worksheet.rowCount);
-      console.log('Filas de headers:', 1);
-      console.log('Filas de datos esperadas:', worksheet.rowCount - 1);
-      console.log('Filas procesadas exitosamente:', results.length);
-      console.log('Filas saltadas (sin SKU):', (worksheet.rowCount - 1) - results.length);
-      console.log('Primeras 3 filas:', results.slice(0, 3));
-      console.log('Nombres de columnas detectados:', Object.keys(results[0] || {}));
-      console.log('=====================================');
-
-      // Validar datos
-      const validationErrors = ImportService.validateImportData(results);
-      if (validationErrors.length > 0) {
-        return res.json({
-          success: false,
-          error: 'Errores de validación en los datos',
-          details: validationErrors
-        });
-      }
-
-      // Importar datos
-      const importResults = await ImportService.importSystemData(results);
-
-      console.log('Importación completada:', importResults);
-
+      // Importar datos usando el servicio
+      const importResults = await importService.importSystemData(results);
+      
       res.json({
         success: true,
         message: 'Importación completada exitosamente',
-        data: importResults
+        results: importResults
       });
 
     } catch (error) {
-      console.error('Error procesando archivo Excel:', error);
+      console.error('Error procesando archivo:', error);
       res.status(500).json({
         success: false,
-        error: 'Error procesando archivo Excel',
-        message: error.message
+        error: `Error procesando archivo: ${error.message}`
       });
     }
-
   } catch (error) {
     console.error('Error en importSystemData:', error);
-    next(error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
   }
 };
 
-// Previsualizar datos del archivo
+// Previsualizar datos de importación
 const previewImportData = async (req, res, next) => {
   try {
     if (!req.file) {
@@ -214,44 +191,50 @@ const previewImportData = async (req, res, next) => {
 
     console.log('Previsualizando archivo:', req.file.originalname);
 
-    const results = [];
-    const errors = [];
-
     // Obtener el buffer del archivo
     const fileBuffer = req.file.buffer;
 
     try {
+      // Verificar que el archivo no esté vacío
+      if (!fileBuffer || fileBuffer.length === 0) {
+        throw new Error('El archivo está vacío o corrupto');
+      }
+
       // Leer el archivo Excel con ExcelJS
       const workbook = new ExcelJS.Workbook();
       await workbook.xlsx.load(fileBuffer);
       
+      console.log('=== DIAGNÓSTICO DEL ARCHIVO EXCEL (PREVIEW) ===');
+      console.log('Número de hojas encontradas:', workbook.worksheets.length);
+      console.log('Nombres de las hojas:', workbook.worksheets.map(ws => ws.name));
+      
       // Obtener la primera hoja
-      const worksheet = workbook.getWorksheet(1);
+      const worksheet = workbook.worksheets[0];
       if (!worksheet) {
         throw new Error('No se encontró ninguna hoja en el archivo Excel');
       }
       
+      console.log('Hoja seleccionada:', worksheet.name);
       console.log('=== PREVIEW EXCEL ===');
-      console.log('Nombre de la hoja:', worksheet.name);
-      console.log('Total de filas en Excel:', worksheet.rowCount);
-      console.log('Filas de datos esperadas:', worksheet.rowCount - 1); // -1 por la fila de headers
-      console.log('============================');
+      console.log('Total de filas:', worksheet.rowCount);
 
-      // Obtener headers de la primera fila
+      // Leer headers de la primera fila
       const headerRow = worksheet.getRow(1);
       const headers = [];
       headerRow.eachCell((cell, colNumber) => {
-        headers[colNumber - 1] = cell.value ? cell.value.toString().toLowerCase().trim() : '';
+        headers[colNumber - 1] = cell.value ? cell.value.toString().trim() : '';
       });
 
-      console.log('Headers detectados:', headers);
+      console.log('Headers encontrados:', headers);
 
-      // Procesar filas de datos (empezar desde la fila 2)
+      // Procesar todas las filas de datos para preview
+      const results = [];
+      
       for (let rowNumber = 2; rowNumber <= worksheet.rowCount; rowNumber++) {
         const row = worksheet.getRow(rowNumber);
         const rowData = {};
         
-        // Mapear cada celda a su header correspondiente
+        // Mapear cada celda a su header
         row.eachCell((cell, colNumber) => {
           const header = headers[colNumber - 1];
           if (header) {
@@ -259,58 +242,51 @@ const previewImportData = async (req, res, next) => {
           }
         });
         
-        // Solo agregar filas que tengan SKU
-        if (rowData.sku && rowData.sku.trim()) {
-          console.log(`Procesando fila ${rowNumber}:`, rowData);
-          
-          // Normalizar los datos usando nombres de columnas
+        // Verificar si tiene SKU usando mapeo inteligente
+        const skuValue = findColumnValue(rowData, ['sku', 'SKU', 'Sku']);
+        
+        // Solo procesar filas que tengan SKU
+        if (skuValue && skuValue.toString().trim()) {
+          // Normalizar los datos para el preview
           const normalizedData = {
-            sku: rowData.sku || '',
-            nombre: rowData.nombre || '',
-            descripcion: rowData.descripcion || '',
-            marca: rowData.marca || '',
-            categoria: rowData.categoria || '',
-            subcategoria: rowData.subcategoria || '',
-            precio: rowData.precio || '',
-            stock: rowData.stock || '',
-            stock_minimo: rowData.stock_minimo || '',
-            peso: rowData.peso || '',
-            dimensiones: rowData.dimensiones || '',
-            imagen: rowData.imagen || '',
-            // NUEVOS CAMPOS PARA CARACTERÍSTICAS Y APLICACIONES
-            caracteristicas: rowData.caracteristicas || '',
-            aplicaciones: rowData.aplicaciones || '',
-            // NUEVOS CAMPOS PARA ACCESORIOS Y PRODUCTOS RELACIONADOS
-            accesorios: rowData.accesorios || '',
-            productos_relacionados: rowData.productos_relacionados || '',
-            // NUEVOS CAMPOS TÉCNICOS
-            sku_ec: rowData.sku_ec || '',
-            potencia_kw: rowData.potencia_kw || '',
-            voltaje: rowData.voltaje || '',
-            frame_size: rowData.frame_size || ''
+            sku: findColumnValue(rowData, ['sku', 'SKU', 'Sku']),
+            nombre: findColumnValue(rowData, ['nombre', 'Nombre', 'NOMBRE', 'name', 'Name', 'NAME']),
+            descripcion: findColumnValue(rowData, ['descripcion', 'Descripción', 'descripcion', 'DESCRIPCION', 'description', 'Description', 'DESCRIPTION']),
+            marca: findColumnValue(rowData, ['marca', 'Marca', 'MARCA', 'brand', 'Brand', 'BRAND', 'fabricante', 'Fabricante', 'FABRICANTE']),
+            categoria: findColumnValue(rowData, ['categoria', 'Categoria', 'Categoría', 'CATEGORIA', 'category', 'Category', 'CATEGORY']),
+            subcategoria: findColumnValue(rowData, ['subcategoria', 'Subcategoria', 'Subcategoría', 'SUBCATEGORIA', 'subcategory', 'Subcategory', 'SUBCATEGORY']),
+            precio: findColumnValue(rowData, ['precio', 'Precio', 'PRECIO', 'price', 'Price', 'PRICE']),
+            stock: findColumnValue(rowData, ['stock', 'Stock', 'STOCK', 'cantidad', 'Cantidad', 'CANTIDAD']),
+            stock_minimo: findColumnValue(rowData, ['stock_minimo', 'Stock Mínimo', 'stock minimo', 'Stock Minimo', 'STOCK_MINIMO', 'min_stock', 'Min Stock']),
+            peso: findColumnValue(rowData, ['peso', 'Peso', 'PESO', 'weight', 'Weight', 'WEIGHT']),
+            dimensiones: findColumnValue(rowData, ['dimensiones', 'Dimensiones', 'DIMENSIONES', 'dimensions', 'Dimensions', 'DIMENSIONS']),
+            imagen: findColumnValue(rowData, ['imagen', 'Imagen', 'IMAGEN', 'image', 'Image', 'IMAGE', 'foto', 'Foto', 'FOTO']),
+            sku_ec: findColumnValue(rowData, ['sku_ec', 'SKU_EC', 'Sku_EC', 'sku ec', 'SKU EC']),
+            potencia_kw: findColumnValue(rowData, ['potencia_kw', 'Potencia (kW)', 'potencia', 'Potencia', 'POTENCIA', 'power', 'Power', 'POWER', 'kw', 'KW']),
+            voltaje: findColumnValue(rowData, ['voltaje', 'Voltaje', 'VOLTAJE', 'voltage', 'Voltage', 'VOLTAGE', 'v', 'V']),
+            frame_size: findColumnValue(rowData, ['frame_size', 'Frame Size', 'frame', 'Frame', 'FRAME', 'tamaño', 'Tamaño', 'TAMAÑO']),
+            corriente: findColumnValue(rowData, ['corriente', 'Corriente', 'CORRIENTE', 'current', 'Current', 'CURRENT', 'amperios', 'Amperios', 'AMPERIOS', 'a', 'A']),
+            comunicacion: findColumnValue(rowData, ['comunicacion', 'Comunicación', 'COMUNICACION', 'communication', 'Communication', 'COMMUNICATION', 'protocolo', 'Protocolo', 'PROTOCOLO']),
+            alimentacion: findColumnValue(rowData, ['alimentacion', 'Alimentacion', 'alimentación', 'Alimentación', 'ALIMENTACION', 'power_supply', 'Power Supply', 'POWER_SUPPLY', 'fuente', 'Fuente', 'FUENTE']),
+            caracteristicas: findColumnValue(rowData, ['caracteristicas', 'Características', 'caracteristicas', 'CARACTERISTICAS', 'features', 'Features', 'FEATURES', 'especificaciones', 'Especificaciones', 'ESPECIFICACIONES']),
+            aplicaciones: findColumnValue(rowData, ['aplicaciones', 'Aplicaciones', 'aplicaciones', 'APLICACIONES', 'applications', 'Applications', 'APPLICATIONS', 'usos', 'Usos', 'USOS']),
+            accesorios: findColumnValue(rowData, ['accesorios', 'Accesorios', 'ACCESORIOS', 'accesorios_compatibles', 'Accesorios compatibles', 'accessories', 'Accessories', 'ACCESSORIES', 'compatibles', 'Compatibles', 'COMPATIBLES']),
+            productos_relacionados: findColumnValue(rowData, ['productos_relacionados', 'Productos relacionados', 'equipos_relacionados', 'Equipos relacionados', 'related_products', 'Related Products', 'RELATED_PRODUCTS', 'relacionados', 'Relacionados', 'RELACIONADOS'])
           };
-
+          
           results.push(normalizedData);
         }
       }
 
-      console.log('=== RESUMEN DE PREVISUALIZACIÓN ===');
-      console.log('Total de filas en Excel:', worksheet.rowCount);
-      console.log('Filas de headers:', 1);
-      console.log('Filas de datos esperadas:', worksheet.rowCount - 1);
-      console.log('Filas procesadas exitosamente:', results.length);
-      console.log('Filas saltadas (sin SKU):', (worksheet.rowCount - 1) - results.length);
-      console.log('Primeras 3 filas:', results.slice(0, 3));
-      console.log('Nombres de columnas detectados:', Object.keys(results[0] || {}));
-      console.log('========================================');
+      console.log('Total de filas en preview:', results.length);
 
-      // Validar datos para previsualización
-      const validationErrors = ImportService.validateImportData(results);
-
+      // Validar datos
+      const validationErrors = importService.validateImportData(results);
+      
       res.json({
         success: true,
         data: {
-          preview: results, // Mostrar TODOS los productos
+          preview: results,
           total_rows: results.length,
           validation_errors: validationErrors,
           can_import: validationErrors.length === 0
@@ -318,17 +294,18 @@ const previewImportData = async (req, res, next) => {
       });
 
     } catch (error) {
-      console.error('Error previsualizando archivo Excel:', error);
+      console.error('Error procesando archivo:', error);
       res.status(500).json({
         success: false,
-        error: 'Error previsualizando archivo Excel',
-        message: error.message
+        error: `Error procesando archivo: ${error.message}`
       });
     }
-
   } catch (error) {
     console.error('Error en previewImportData:', error);
-    next(error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
   }
 };
 

@@ -28,7 +28,7 @@ class ProductService {
       const productAttributes = [
         'id', 'sku', 'sku_ec', 'name', 'description', 'price', 'stock_quantity', 
         'min_stock_level', 'weight', 'dimensions', 'main_image', 'is_active',
-        'potencia_kw', 'voltaje', 'frame_size',
+        'potencia_kw', 'voltaje', 'frame_size', 'corriente', 'comunicacion', 'alimentacion',
         'brand_id', 'category_id', 'subcategory_id', 'created_at', 'updated_at'
       ];
 
@@ -170,7 +170,7 @@ class ProductService {
         attributes: [
           'id', 'sku', 'sku_ec', 'name', 'description', 'price', 'stock_quantity', 
           'min_stock_level', 'weight', 'dimensions', 'main_image', 'is_active',
-          'potencia_kw', 'voltaje', 'frame_size',
+          'potencia_kw', 'voltaje', 'frame_size', 'corriente', 'comunicacion', 'alimentacion',
           'brand_id', 'category_id', 'subcategory_id', 'created_at', 'updated_at'
         ]
       });
@@ -217,7 +217,12 @@ class ProductService {
     
     // Campos numéricos que pueden ser null
     const numericFields = [
-      'price', 'stock_quantity', 'min_stock_level', 'weight', 'potencia_kw'
+      'price', 'stock_quantity', 'min_stock_level', 'weight', 'potencia_kw', 'corriente'
+    ];
+    
+    // Campos de texto que pueden ser null
+    const textFields = [
+      'comunicacion', 'alimentacion'
     ];
     
     // Campos de ID que pueden ser null (opcionales)
@@ -232,6 +237,13 @@ class ProductService {
       } else if (typeof cleaned[field] === 'string') {
         const num = parseFloat(cleaned[field]);
         cleaned[field] = isNaN(num) ? null : num;
+      }
+    });
+    
+    // Limpiar campos de texto
+    textFields.forEach(field => {
+      if (cleaned[field] === '' || cleaned[field] === null || cleaned[field] === undefined) {
+        cleaned[field] = null;
       }
     });
     
@@ -606,6 +618,38 @@ class ProductService {
     } catch (error) {
       console.error('Error en exportProductsWithRelations:', error);
       throw new Error(`Error al exportar productos con relaciones: ${error.message}`);
+    }
+  }
+
+  // Limpiar todos los productos (hard delete)
+  async clearAllProducts() {
+    try {
+      console.log('Iniciando limpieza de todos los productos...');
+      
+      // Obtener conteo antes de eliminar
+      const totalProducts = await Product.count();
+      
+      console.log(`Total de productos encontrados: ${totalProducts}`);
+      
+      if (totalProducts === 0) {
+        console.log('No hay productos para eliminar');
+        return { deleted_count: 0 };
+      }
+      
+      // Realizar hard delete de todos los productos
+      const deletedCount = await Product.destroy({
+        where: {}
+      });
+      
+      console.log(`Limpieza completada: ${deletedCount} productos eliminados`);
+      
+      return { 
+        deleted_count: deletedCount,
+        total_found: totalProducts
+      };
+    } catch (error) {
+      console.error('Error en clearAllProducts:', error);
+      throw new Error(`Error al limpiar productos: ${error.message}`);
     }
   }
 }
