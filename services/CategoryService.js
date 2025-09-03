@@ -155,7 +155,7 @@ class CategoryService {
           {
             model: Category,
             as: 'category',
-            attributes: ['id', 'name', 'description', 'icon', 'color']
+            attributes: ['id', 'name', 'description']
           }
         ],
         order: [['name', 'ASC']]

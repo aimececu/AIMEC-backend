@@ -87,17 +87,9 @@ router.get('/:id', categoryController.getCategoryById);
  *               description:
  *                 type: string
  *                 description: Descripción de la categoría
- *               icon:
- *                 type: string
- *                 description: Icono de la categoría
- *               color:
- *                 type: string
- *                 description: Color de la categoría (hex)
  *           example:
  *             name: "Contactores"
  *             description: "Dispositivos electromagnéticos para control de motores"
- *             icon: "fas fa-plug"
- *             color: "#3B82F6"
  *     responses:
  *       201:
  *         description: Categoría creada exitosamente

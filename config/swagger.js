@@ -124,8 +124,6 @@ const swaggerOptions = {
             id: { type: "integer", example: 1 },
             name: { type: "string", example: "Contactores" },
             description: { type: "string", example: "Dispositivos electromagnéticos para control de motores" },
-            icon: { type: "string", example: "fas fa-plug" },
-            color: { type: "string", example: "#3B82F6" },
             is_active: { type: "boolean", example: true },
             created_at: { type: "string", format: "date-time", example: "2024-01-15T10:30:00Z" },
             updated_at: { type: "string", format: "date-time", example: "2024-01-15T10:30:00Z" }
@@ -221,8 +219,7 @@ const swaggerOptions = {
               type: "object",
               properties: {
                 id: { type: "integer", example: 3 },
-                name: { type: "string", example: "Cables" },
-                color: { type: "string", example: "#FF6B6B" }
+                name: { type: "string", example: "Cables" }
               }
             },
             subcategory: {

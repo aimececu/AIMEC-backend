@@ -23,8 +23,6 @@ CREATE TABLE categories (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     description TEXT,
-    icon VARCHAR(50),
-    color VARCHAR(7), -- Hex color
     sort_order INTEGER DEFAULT 0,
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -173,7 +171,6 @@ CREATE TABLE features (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     description TEXT,
-    icon VARCHAR(50),
     category_id INTEGER REFERENCES categories(id) ON DELETE CASCADE,
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -290,12 +287,12 @@ INSERT INTO brands (name, description) VALUES
 ('Mitsubishi', 'Sistemas de control');
 
 -- Insertar categorías principales
-INSERT INTO categories (name, description, icon, color, sort_order) VALUES
-('Controladores', 'PLCs, PACs y sistemas de control', 'FiCpu', '#3B82F6', 1),
-('Interfaces HMI', 'Paneles de operador y HMI', 'FiMonitor', '#10B981', 2),
-('Variadores', 'Variadores de frecuencia y servo', 'FiZap', '#F59E0B', 3),
-('Sensores', 'Sensores de todo tipo', 'FiRadio', '#EF4444', 4),
-('Actuadores', 'Actuadores lineales y rotativos', 'FiMove', '#8B5CF6', 5);
+INSERT INTO categories (name, description, sort_order) VALUES
+('Controladores', 'PLCs, PACs y sistemas de control', 1),
+('Interfaces HMI', 'Paneles de operador y HMI', 2),
+('Variadores', 'Variadores de frecuencia y servo', 3),
+('Sensores', 'Sensores de todo tipo', 4),
+('Actuadores', 'Actuadores lineales y rotativos', 5);
 
 -- Insertar subcategorías
 INSERT INTO subcategories (category_id, name, sort_order) VALUES

@@ -19,14 +19,6 @@ const Category = sequelize.define('Category', {
     type: DataTypes.TEXT,
     allowNull: true
   },
-  icon: {
-    type: DataTypes.STRING(100),
-    allowNull: true
-  },
-  color: {
-    type: DataTypes.STRING(7),
-    allowNull: true
-  },
   is_active: {
     type: DataTypes.BOOLEAN,
     allowNull: false,
