@@ -20,6 +20,8 @@ const productFeaturesRoutes = require('./routes/productFeatures');
 const productApplicationsRoutes = require('./routes/productApplications');
 const accessoryRoutes = require('./routes/accessories');
 const relatedProductRoutes = require('./routes/relatedProducts');
+const emailRoutes = require('./routes/email');
+const quotationRoutes = require('./routes/quotations');
 
 const app = express();
 
@@ -163,6 +165,12 @@ app.use("/api/import", importRoutes);
 
 // Rutas de autenticación
 app.use("/api/auth", authRoutes);
+
+// Rutas de correo
+app.use("/api/email", emailRoutes);
+
+// Rutas de cotizaciones
+app.use("/api/quotations", quotationRoutes);
 
 // =====================================================
 // MIDDLEWARE DE MANEJO DE ERRORES

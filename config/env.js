@@ -70,6 +70,21 @@ const config = {
     strict: process.env.VALIDATION_STRICT === 'true',
   },
 
+  // Email
+  email: {
+    smtp: {
+      host: process.env.SMTP_HOST || 'smtp.zoho.com',
+      port: parseInt(process.env.SMTP_PORT) || 465,
+      secure: process.env.SMTP_SECURE === 'true' || parseInt(process.env.SMTP_PORT) === 465,
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+      from: process.env.SMTP_FROM || process.env.SMTP_USER,
+    },
+    contact: {
+      email: process.env.CONTACT_EMAIL || process.env.SMTP_USER,
+    }
+  },
+
   // Cloudinary (alternativa a S3)
   cloudinary: {
     cloudName: process.env.CLOUDINARY_CLOUD_NAME,

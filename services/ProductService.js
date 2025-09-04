@@ -149,24 +149,10 @@ class ProductService {
   // Obtener producto por ID
   async getProductById(id) {
     try {
+      console.log(`Buscando producto con ID: ${id}`);
+      
+      // Primero intentar obtener el producto básico sin relaciones
       const product = await Product.findByPk(id, {
-        include: [
-          {
-            model: Brand,
-            as: 'brand',
-            attributes: ['id', 'name', 'logo_url', 'website']
-          },
-          {
-            model: Category,
-            as: 'category',
-            attributes: ['id', 'name', 'description', 'icon', 'color']
-          },
-          {
-            model: Subcategory,
-            as: 'subcategory',
-            attributes: ['id', 'name', 'description']
-          }
-        ],
         attributes: [
           'id', 'sku', 'sku_ec', 'name', 'description', 'price', 'stock_quantity', 
           'min_stock_level', 'weight', 'dimensions', 'main_image', 'is_active',
@@ -179,21 +165,79 @@ class ProductService {
         throw new Error('Producto no encontrado');
       }
 
-      // Obtener counts de características, aplicaciones y accesorios
-      const [featuresCount, applicationsCount, accessoriesCount] = await Promise.all([
-        ProductFeature.count({ where: { product_id: product.id } }),
-        ProductApplication.count({ where: { product_id: product.id } }),
-        Accessory.count({ where: { main_product_id: product.id } })
-      ]);
+      console.log(`Producto encontrado: ${product.name}`);
 
-      // Agregar counts al producto
+      // Intentar obtener las relaciones por separado
+      let brand = null;
+      let category = null;
+      let subcategory = null;
+
+      try {
+        if (product.brand_id) {
+          brand = await Brand.findByPk(product.brand_id, {
+            attributes: ['id', 'name', 'logo_url', 'website']
+          });
+        }
+      } catch (error) {
+        console.log('Error obteniendo brand:', error.message);
+      }
+
+      try {
+        if (product.category_id) {
+          category = await Category.findByPk(product.category_id, {
+            attributes: ['id', 'name', 'description', 'icon', 'color']
+          });
+        }
+      } catch (error) {
+        console.log('Error obteniendo category:', error.message);
+      }
+
+      try {
+        if (product.subcategory_id) {
+          subcategory = await Subcategory.findByPk(product.subcategory_id, {
+            attributes: ['id', 'name', 'description']
+          });
+        }
+      } catch (error) {
+        console.log('Error obteniendo subcategory:', error.message);
+      }
+
+      // Obtener counts de forma segura
+      let featuresCount = 0;
+      let applicationsCount = 0;
+      let accessoriesCount = 0;
+
+      try {
+        featuresCount = await ProductFeature.count({ where: { product_id: product.id } });
+      } catch (error) {
+        console.log('Error obteniendo features count:', error.message);
+      }
+
+      try {
+        applicationsCount = await ProductApplication.count({ where: { product_id: product.id } });
+      } catch (error) {
+        console.log('Error obteniendo applications count:', error.message);
+      }
+
+      try {
+        accessoriesCount = await Accessory.count({ where: { main_product_id: product.id } });
+      } catch (error) {
+        console.log('Error obteniendo accessories count:', error.message);
+      }
+
+      // Construir el objeto de respuesta
       const productWithCounts = product.toJSON();
+      productWithCounts.brand = brand;
+      productWithCounts.category = category;
+      productWithCounts.subcategory = subcategory;
       productWithCounts.features_count = featuresCount;
       productWithCounts.applications_count = applicationsCount;
       productWithCounts.accessories_count = accessoriesCount;
 
+      console.log('Producto procesado exitosamente');
       return productWithCounts;
     } catch (error) {
+      console.error('Error completo en getProductById:', error);
       throw new Error(`Error al obtener producto: ${error.message}`);
     }
   }
