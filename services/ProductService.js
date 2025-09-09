@@ -185,7 +185,7 @@ class ProductService {
       try {
         if (product.category_id) {
           category = await Category.findByPk(product.category_id, {
-            attributes: ['id', 'name', 'description', 'icon', 'color']
+            attributes: ['id', 'name', 'description']
           });
         }
       } catch (error) {
