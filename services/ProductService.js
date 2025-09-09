@@ -536,7 +536,7 @@ class ProductService {
         attributes: [
           'id', 'sku', 'sku_ec', 'name', 'description', 'price', 'stock_quantity', 
           'min_stock_level', 'weight', 'dimensions', 'main_image',
-          'potencia_kw', 'voltaje', 'frame_size'
+          'potencia_kw', 'voltaje', 'frame_size', 'corriente', 'alimentacion', 'comunicacion'
         ],
         order: [['id', 'ASC']]
       });
