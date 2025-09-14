@@ -197,4 +197,41 @@ router.post('/test', emailController.sendTestEmail);
  */
 router.get('/status', emailController.getEmailStatus);
 
+/**
+ * @swagger
+ * /api/email/test-connection:
+ *   post:
+ *     summary: Probar conexión SMTP
+ *     description: Prueba la conexión con el servidor SMTP configurado
+ *     tags: [Email]
+ *     responses:
+ *       200:
+ *         description: Conexión SMTP exitosa
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Conexión SMTP exitosa"
+ *       500:
+ *         description: Error de conexión SMTP
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: "Timeout: El servidor SMTP no responde. Verifica la configuración."
+ */
+router.post('/test-connection', emailController.testSMTPConnection);
+
 module.exports = router;

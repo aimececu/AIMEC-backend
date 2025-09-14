@@ -169,8 +169,34 @@ const getEmailStatus = async (req, res) => {
   }
 };
 
+/**
+ * Probar conexión SMTP
+ * POST /api/email/test-connection
+ */
+const testSMTPConnection = async (req, res) => {
+  try {
+    console.log('Probando conexión SMTP...');
+    
+    const result = await EmailService.testConnection();
+    
+    res.status(200).json({
+      success: true,
+      message: result.message
+    });
+
+  } catch (error) {
+    console.error('Error en testSMTPConnection:', error);
+    
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   sendContactEmail,
   sendTestEmail,
-  getEmailStatus
+  getEmailStatus,
+  testSMTPConnection
 };

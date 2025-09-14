@@ -114,12 +114,18 @@ app.get("/", (req, res) => {
       health: "/health",
       apiDocs: "/api-docs",
       products: "/api/products",
+      productFeatures: "/api/productFeatures",
+      productApplications: "/api/productApplications",
+      accessories: "/api/accessories",
+      relatedProducts: "/api/relatedProducts",
       categories: "/api/categories",
       brands: "/api/brands",
       info: "/api/info",
       import: "/api/import",
       auth: "/api/auth",
-      files: "/api/files"
+      files: "/api/files",
+      email: "/api/email",
+      quotations: "/api/quotations"
     }
   });
 });

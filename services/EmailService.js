@@ -19,7 +19,17 @@ class EmailService {
       // Configuraciones adicionales para Zoho Mail
       tls: {
         rejectUnauthorized: false // Para evitar problemas de certificados en desarrollo
-      }
+      },
+      // Configuraciones de timeout y conexión
+      connectionTimeout: 60000, // 60 segundos
+      greetingTimeout: 30000,   // 30 segundos
+      socketTimeout: 60000,     // 60 segundos
+      // Configuraciones de pool para mejor manejo de conexiones
+      pool: true,
+      maxConnections: 5,
+      maxMessages: 100,
+      rateDelta: 20000,
+      rateLimit: 5
     });
 
     // Verificar la configuración del transporter (opcional para cuentas gratuitas)
@@ -308,12 +318,57 @@ AIMEC - Componentes Industriales y Servicios Técnicos
 
     } catch (error) {
       console.error('Error enviando correo de cotización:', error);
+      
+      // Manejo específico de errores de timeout
+      if (error.code === 'ETIMEDOUT' || error.message.includes('timeout')) {
+        throw new Error(`Error de timeout: El servidor SMTP no responde. Verifica la configuración de red y credenciales.`);
+      }
+      
+      // Manejo específico de errores de autenticación
+      if (error.code === 'EAUTH' || error.message.includes('authentication')) {
+        throw new Error(`Error de autenticación: Verifica las credenciales SMTP (usuario y contraseña).`);
+      }
+      
+      // Manejo específico de errores de conexión
+      if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
+        throw new Error(`Error de conexión: No se puede conectar al servidor SMTP. Verifica el host y puerto.`);
+      }
+      
+      // Error genérico
       throw new Error(`Error enviando cotización: ${error.message}`);
+    }
+  }
+
+  async testConnection() {
+    try {
+      console.log('Probando conexión SMTP...');
+      await this.transporter.verify();
+      console.log('Conexión SMTP exitosa');
+      return { success: true, message: 'Conexión SMTP exitosa' };
+    } catch (error) {
+      console.error('Error en conexión SMTP:', error);
+      
+      if (error.code === 'ETIMEDOUT') {
+        throw new Error('Timeout: El servidor SMTP no responde. Verifica la configuración.');
+      }
+      
+      if (error.code === 'EAUTH') {
+        throw new Error('Error de autenticación: Verifica las credenciales SMTP.');
+      }
+      
+      if (error.code === 'ECONNREFUSED') {
+        throw new Error('Conexión rechazada: Verifica el host y puerto SMTP.');
+      }
+      
+      throw new Error(`Error de conexión: ${error.message}`);
     }
   }
 
   async sendTestEmail() {
     try {
+      // Primero probar la conexión
+      await this.testConnection();
+      
       const mailOptions = {
         from: process.env.SMTP_FROM || process.env.SMTP_USER,
         to: process.env.SMTP_USER,
