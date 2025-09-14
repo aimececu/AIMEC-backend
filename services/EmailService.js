@@ -7,37 +7,56 @@ class EmailService {
   }
 
   initializeTransporter() {
-    // Configuración del transporter de nodemailer para Zoho Mail
+    // Configuración específica para Railway (producción)
+    const isProduction = process.env.NODE_ENV === 'production' || process.env.RAILWAY_ENVIRONMENT;
+    
     const config = {
       host: process.env.SMTP_HOST || 'smtp.zoho.com',
-      port: parseInt(process.env.SMTP_PORT) || 587, // Cambiar a 587 por defecto
-      secure: process.env.SMTP_SECURE === 'true' || parseInt(process.env.SMTP_PORT) === 465, // true para 465 (SSL), false para 587 (TLS)
+      // En Railway, usar puerto 465 (SSL) que es más probable que esté permitido
+      port: parseInt(process.env.SMTP_PORT) || (isProduction ? 465 : 587),
+      secure: process.env.SMTP_SECURE === 'true' || parseInt(process.env.SMTP_PORT) === 465,
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
       },
-      // Configuraciones adicionales para Zoho Mail
+      // Configuraciones optimizadas para Railway
       tls: {
-        rejectUnauthorized: false, // Para evitar problemas de certificados en desarrollo
-        ciphers: 'SSLv3'
+        rejectUnauthorized: false,
+        ciphers: 'SSLv3',
+        // Configuraciones adicionales para Railway
+        servername: 'smtp.zoho.com'
       },
-      // Configuraciones de timeout y conexión
-      connectionTimeout: 60000, // 60 segundos
-      greetingTimeout: 30000,   // 30 segundos
-      socketTimeout: 60000,     // 60 segundos
-      // Configuraciones de pool para mejor manejo de conexiones
-      pool: false, // Desactivar pool temporalmente
-      // Configuraciones adicionales para Zoho
-      requireTLS: true,
-      debug: true // Habilitar debug para ver más detalles
+      // Timeouts más largos para Railway
+      connectionTimeout: isProduction ? 120000 : 60000, // 2 minutos en producción
+      greetingTimeout: isProduction ? 60000 : 30000,    // 1 minuto en producción
+      socketTimeout: isProduction ? 120000 : 60000,     // 2 minutos en producción
+      // Configuraciones de pool optimizadas para Railway
+      pool: false,
+      maxConnections: 1,
+      maxMessages: 1,
+      // Configuraciones adicionales para Railway
+      requireTLS: !isProduction, // En producción usar SSL directo
+      debug: !isProduction // Solo debug en desarrollo
     };
 
     console.log('Configuración SMTP:', {
+      environment: isProduction ? 'PRODUCTION (Railway)' : 'DEVELOPMENT',
       host: config.host,
       port: config.port,
       secure: config.secure,
-      user: config.auth.user ? '***@' + config.auth.user.split('@')[1] : 'No configurado'
+      user: config.auth.user ? '***@' + config.auth.user.split('@')[1] : 'No configurado',
+      timeouts: {
+        connection: config.connectionTimeout,
+        greeting: config.greetingTimeout,
+        socket: config.socketTimeout
+      }
     });
+
+    // Log adicional para Railway
+    if (isProduction) {
+      console.log('🚀 Configuración optimizada para Railway');
+      console.log('📧 Usando puerto 465 (SSL) para mejor compatibilidad');
+    }
 
     this.transporter = nodemailer.createTransport(config);
 
