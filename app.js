@@ -259,7 +259,9 @@ app.use((req, res) => {
         info: "/api/info",
         import: "/api/import",
         auth: "/api/auth",
-        files: "/api/files"
+        files: "/api/files",
+        email: "/api/email",
+        quotations: "/api/quotations"
       }
   });
 });

@@ -199,7 +199,7 @@ router.get('/status', emailController.getEmailStatus);
 
 /**
  * @swagger
- * /api/email/test-connection:
+ * /api/email/testconnection:
  *   post:
  *     summary: Probar conexión SMTP
  *     description: Prueba la conexión con el servidor SMTP configurado
@@ -232,6 +232,30 @@ router.get('/status', emailController.getEmailStatus);
  *                   type: string
  *                   example: "Timeout: El servidor SMTP no responde. Verifica la configuración."
  */
-router.post('/test-connection', emailController.testSMTPConnection);
+router.post('/testconnection', emailController.testSMTPConnection);
+
+/**
+ * Endpoint de prueba simple para verificar que las rutas funcionan
+ */
+router.get('/test-route', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Rutas de email funcionando correctamente',
+    timestamp: new Date().toISOString()
+  });
+});
+
+/**
+ * Endpoint de prueba para debuggear el problema
+ */
+router.post('/test-post', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Endpoint POST funcionando',
+    method: 'POST',
+    path: '/api/email/test-post',
+    timestamp: new Date().toISOString()
+  });
+});
 
 module.exports = router;

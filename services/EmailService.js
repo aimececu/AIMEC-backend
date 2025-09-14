@@ -8,9 +8,9 @@ class EmailService {
 
   initializeTransporter() {
     // Configuración del transporter de nodemailer para Zoho Mail
-    this.transporter = nodemailer.createTransport({
+    const config = {
       host: process.env.SMTP_HOST || 'smtp.zoho.com',
-      port: parseInt(process.env.SMTP_PORT) || 465,
+      port: parseInt(process.env.SMTP_PORT) || 587, // Cambiar a 587 por defecto
       secure: process.env.SMTP_SECURE === 'true' || parseInt(process.env.SMTP_PORT) === 465, // true para 465 (SSL), false para 587 (TLS)
       auth: {
         user: process.env.SMTP_USER,
@@ -18,19 +18,28 @@ class EmailService {
       },
       // Configuraciones adicionales para Zoho Mail
       tls: {
-        rejectUnauthorized: false // Para evitar problemas de certificados en desarrollo
+        rejectUnauthorized: false, // Para evitar problemas de certificados en desarrollo
+        ciphers: 'SSLv3'
       },
       // Configuraciones de timeout y conexión
       connectionTimeout: 60000, // 60 segundos
       greetingTimeout: 30000,   // 30 segundos
       socketTimeout: 60000,     // 60 segundos
       // Configuraciones de pool para mejor manejo de conexiones
-      pool: true,
-      maxConnections: 5,
-      maxMessages: 100,
-      rateDelta: 20000,
-      rateLimit: 5
+      pool: false, // Desactivar pool temporalmente
+      // Configuraciones adicionales para Zoho
+      requireTLS: true,
+      debug: true // Habilitar debug para ver más detalles
+    };
+
+    console.log('Configuración SMTP:', {
+      host: config.host,
+      port: config.port,
+      secure: config.secure,
+      user: config.auth.user ? '***@' + config.auth.user.split('@')[1] : 'No configurado'
     });
+
+    this.transporter = nodemailer.createTransport(config);
 
     // Verificar la configuración del transporter (opcional para cuentas gratuitas)
     this.transporter.verify((error, success) => {
