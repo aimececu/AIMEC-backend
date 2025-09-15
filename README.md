@@ -9,8 +9,9 @@ API REST para el sistema de gestión de productos industriales AIMEC.
 - **Preservación de Datos**: No borra datos existentes al agregar nuevas columnas
 - **API RESTful**: Endpoints bien documentados con Swagger
 - **Autenticación JWT**: Sistema de autenticación seguro
-- **Base de Datos PostgreSQL**: Con Sequelize ORM
-- **Despliegue Multi-Cloud**: Configurado para Railway, Render, Vercel y AWS
+- **Base de Datos PostgreSQL**: Con Sequelize ORM en Railway
+- **Servicio de Email**: SMTP2GO para emails transaccionales
+- **Despliegue en Railway**: Backend y base de datos alojados en Railway
 
 ## 📋 Requisitos
 
@@ -66,11 +67,11 @@ npm start
 ## 🌐 Arquitectura de Despliegue
 
 ### Servicios Utilizados
+- **Backend API**: Node.js en Railway
 - **Base de Datos**: PostgreSQL en Railway
-- **Backend API**: Node.js en Render.com
 - **Frontend**: React en Vercel
-- **Dominio**: AWS Route 53
-- **Almacenamiento**: [Por definir - opciones recomendadas abajo]
+- **Email**: SMTP2GO + Zoho Mail
+- **Dominio**: [Configurar según necesidades]
 
 ### Variables de Entorno por Entorno
 
@@ -84,18 +85,30 @@ DB_NAME=aimec_db
 DB_USER=tu_usuario
 DB_PASSWORD=tu_password
 DB_SCHEMA=public
+
+# Email - SMTP2GO
+SMTP2GO_API_KEY=tu_api_key_de_smtp2go
+SMTP2GO_FROM_EMAIL=tu-email@tudominio.com
+SMTP2GO_FROM_NAME=AIMEC
+CONTACT_EMAIL=tu-email@tudominio.com
 ```
 
-#### Producción (Render.com)
+#### Producción (Railway)
 ```env
 NODE_ENV=production
-PORT=10000
-DB_HOST=tu-railway-host.railway.app
-DB_PORT=5432
+PORT=3750
+DB_HOST=yamabiko.proxy.rlwy.net
+DB_PORT=18274
 DB_NAME=railway
 DB_USER=postgres
-DB_PASSWORD=tu-railway-password
-DB_SCHEMA=public
+DB_PASSWORD=tu_password_railway
+DB_SCHEMA=aimec_products
+
+# Email - SMTP2GO
+SMTP2GO_API_KEY=api-A3FD07E87C234964A0266ED655C6FA54
+SMTP2GO_FROM_EMAIL=info@aimec-ec.com
+SMTP2GO_FROM_NAME=AIMEC
+CONTACT_EMAIL=info@aimec-ec.com
 ```
 
 ## 📁 Estructura del Proyecto
@@ -118,73 +131,72 @@ AIMEC-backend/
 1. Crear proyecto en Railway
 2. Agregar servicio PostgreSQL
 3. Copiar variables de entorno desde Railway Dashboard
-4. Configurar en Render.com
+4. El backend también se despliega en Railway
 
 ### Variables de Entorno (.env)
 ```env
 # Base de Datos
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=aimec_db
-DB_USER=tu_usuario
-DB_PASSWORD=tu_password
-DB_SCHEMA=public
+DB_HOST=yamabiko.proxy.rlwy.net
+DB_PORT=18274
+DB_NAME=railway
+DB_USER=postgres
+DB_PASSWORD=tu_password_railway
+DB_SCHEMA=aimec_products
 
 # Entorno
-NODE_ENV=development
+NODE_ENV=production
 PORT=3750
 
-# AWS (para dominio)
-AWS_REGION=us-east-1
+# Email - SMTP2GO
+SMTP2GO_API_KEY=tu_api_key_de_smtp2go
+SMTP2GO_FROM_EMAIL=info@aimec-ec.com
+SMTP2GO_FROM_NAME=AIMEC
+CONTACT_EMAIL=info@aimec-ec.com
 ```
 
 ## 📚 API Endpoints
 
 ### Documentación
 - **Swagger UI**: `http://localhost:3750/api-docs` (desarrollo)
-- **Swagger UI**: `https://tu-app.onrender.com/api-docs` (producción)
+- **Swagger UI**: `https://tu-app.railway.app/api-docs` (producción)
 - **Health Check**: `GET /health`
 
 ### Principales
 - **Productos**: `GET/POST/PUT/DELETE /api/products`
 - **Categorías**: `GET/POST/PUT/DELETE /api/categories`
 - **Autenticación**: `POST /api/auth/login`
-- **Especificaciones**: `GET/POST/PUT/DELETE /api/specifications`
+- **Email**: `POST /api/email/contact` (formulario de contacto)
+- **Cotizaciones**: `POST /api/quotations` (enviar cotización)
 
-## 🖼️ Almacenamiento de Imágenes
+## 📧 Configuración de Email
 
-### Opciones Recomendadas
+### SMTP2GO + Zoho Mail
+El sistema utiliza SMTP2GO como servicio de email transaccional con Zoho Mail como proveedor de email.
 
-#### 1. AWS S3 (Recomendado)
-- **Ventajas**: Escalable, confiable, integración con AWS
-- **Configuración**: Bucket S3 + CloudFront para CDN
-- **Costo**: ~$0.023/GB/mes
+#### Configuración SMTP2GO
+1. **Registrarse en SMTP2GO**: [https://www.smtp2go.com/](https://www.smtp2go.com/)
+2. **Obtener API Key**: Desde el dashboard de SMTP2GO
+3. **Configurar dominio**: Verificar dominio de envío
+4. **Configurar variables de entorno**:
+   ```env
+   SMTP2GO_API_KEY=tu_api_key_de_smtp2go
+   SMTP2GO_FROM_EMAIL=info@aimec-ec.com
+   SMTP2GO_FROM_NAME=AIMEC
+   CONTACT_EMAIL=info@aimec-ec.com
+   ```
 
-#### 2. Cloudinary
-- **Ventajas**: Optimización automática, transformaciones
-- **Configuración**: Cuenta gratuita hasta 25GB
-- **Costo**: Gratis para uso básico
+#### Ventajas de SMTP2GO
+- ✅ **Mayor confiabilidad**: Mejor tasa de entrega que SMTP tradicional
+- ✅ **Analytics**: Tracking de emails enviados, entregados, abiertos
+- ✅ **Fácil configuración**: Solo necesitas una API Key
+- ✅ **Plan gratuito**: 1000 emails por mes
+- ✅ **Sin configuración SMTP compleja**: No necesitas configurar puertos, SSL, etc.
 
-#### 3. Railway Storage
-- **Ventajas**: Mismo proveedor que la base de datos
-- **Configuración**: Integrado con Railway
-- **Costo**: Incluido en el plan
-
-#### 4. Vercel Blob Storage
-- **Ventajas**: Integración nativa con Vercel
-- **Configuración**: Fácil setup
-- **Costo**: $0.20/GB/mes
-
-### Implementación Sugerida
-```javascript
-// Ejemplo con AWS S3
-const AWS = require('aws-sdk');
-const s3 = new AWS.S3({
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  region: process.env.AWS_REGION
-});
-```
+#### Funcionalidades de Email
+- **Formulario de contacto**: `POST /api/email/contact`
+- **Envío de cotizaciones**: `POST /api/quotations`
+- **Emails de prueba**: `POST /api/email/test`
+- **Verificación de estado**: `GET /api/email/status`
 
 ## 🔄 Sistema de Sincronización
 
@@ -209,7 +221,7 @@ npm run force-sync
 curl http://localhost:3750/health
 
 # Producción
-curl https://tu-app.onrender.com/health
+curl https://tu-app.railway.app/health
 ```
 
 ### Logs
@@ -236,6 +248,25 @@ Los logs se muestran en consola durante desarrollo y incluyen:
 1. Verificar sintaxis de los modelos
 2. Revisar relaciones entre modelos
 3. Verificar tipos de datos
+
+### Problemas con Email (SMTP2GO)
+1. **Error "SMTP2GO_API_KEY no está configurado"**:
+   - Verificar que la variable `SMTP2GO_API_KEY` esté en tu archivo `.env`
+   - Reiniciar el servidor después de agregar la variable
+
+2. **Error "SMTP2GO_FROM_EMAIL no está configurado"**:
+   - Verificar que la variable `SMTP2GO_FROM_EMAIL` esté en tu archivo `.env`
+   - Asegurarse de que el email esté verificado en SMTP2GO
+
+3. **Error de conexión a la API de SMTP2GO**:
+   - Verificar tu conexión a internet
+   - Verificar que la API Key sea correcta
+   - Verificar que tu cuenta de SMTP2GO esté activa
+
+4. **Error SMTP2GO específico**:
+   - Revisar el mensaje de error específico
+   - Verificar que el dominio de envío esté configurado correctamente
+   - Verificar que no hayas excedido el límite de emails (1000/mes en plan gratuito)
 
 ## 🔄 Migraciones
 
@@ -272,12 +303,27 @@ npm run force-sync
 
 ## 🚀 Despliegue
 
-### Render.com (Backend)
-1. Conectar repositorio en Render
-2. Configurar variables de entorno
-3. Build Command: `npm install`
-4. Start Command: `npm start`
-5. Puerto: `10000`
+### Railway (Backend + Base de Datos)
+1. **Crear proyecto en Railway**
+2. **Agregar servicio PostgreSQL**
+3. **Conectar repositorio del backend**
+4. **Configurar variables de entorno**:
+   ```env
+   NODE_ENV=production
+   PORT=3750
+   DB_HOST=yamabiko.proxy.rlwy.net
+   DB_PORT=18274
+   DB_NAME=railway
+   DB_USER=postgres
+   DB_PASSWORD=tu_password_railway
+   DB_SCHEMA=aimec_products
+   SMTP2GO_API_KEY=tu_api_key_de_smtp2go
+   SMTP2GO_FROM_EMAIL=info@aimec-ec.com
+   SMTP2GO_FROM_NAME=AIMEC
+   CONTACT_EMAIL=info@aimec-ec.com
+   ```
+5. **Build Command**: `npm install`
+6. **Start Command**: `npm start`
 
 ### Vercel (Frontend)
 1. Conectar repositorio en Vercel
@@ -285,16 +331,33 @@ npm run force-sync
 3. Build Command: `npm run build`
 4. Output Directory: `dist`
 
-### AWS Route 53 (Dominio)
-1. Registrar dominio en AWS
-2. Configurar DNS en Route 53
-3. Apuntar a Render (backend) y Vercel (frontend)
+### Configuración de Dominio
+1. Configurar DNS para apuntar a Railway (backend)
+2. Configurar subdominio para Vercel (frontend)
+3. Configurar SSL automático en Railway y Vercel
 
-### Railway (Base de Datos)
-1. Crear proyecto en Railway
-2. Agregar servicio PostgreSQL
-3. Copiar variables de entorno
-4. Configurar en Render.com
+## 🛠️ Servicios Utilizados
+
+### Backend y Base de Datos
+- **Railway**: Hosting del backend Node.js y base de datos PostgreSQL
+- **PostgreSQL**: Base de datos relacional con Sequelize ORM
+- **Node.js**: Runtime de JavaScript para el backend
+
+### Email
+- **SMTP2GO**: Servicio de email transaccional para envío de correos
+- **Zoho Mail**: Proveedor de email para la cuenta de envío (info@aimec-ec.com)
+
+### Frontend
+- **Vercel**: Hosting del frontend React
+- **React**: Framework de JavaScript para la interfaz de usuario
+
+### Características Técnicas
+- **API REST**: Endpoints bien documentados con Swagger
+- **Autenticación JWT**: Sistema de autenticación seguro
+- **CORS**: Configuración para permitir requests desde el frontend
+- **Rate Limiting**: Protección contra spam y abuso
+- **Validación**: Validación de datos de entrada
+- **Logging**: Sistema de logs para monitoreo
 
 ## 📄 Licencia
 
