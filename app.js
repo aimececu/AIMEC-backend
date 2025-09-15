@@ -15,7 +15,6 @@ const brandRoutes = require('./routes/brands');
 const authRoutes = require('./routes/auth');
 const infoRoutes = require('./routes/info');
 const importRoutes = require('./routes/import');
-const fileRoutes = require('./routes/files');
 const productFeaturesRoutes = require('./routes/productFeatures');
 const productApplicationsRoutes = require('./routes/productApplications');
 const accessoryRoutes = require('./routes/accessories');
@@ -123,7 +122,6 @@ app.get("/", (req, res) => {
       info: "/api/info",
       import: "/api/import",
       auth: "/api/auth",
-      files: "/api/files",
       email: "/api/email",
       quotations: "/api/quotations"
     }
@@ -134,8 +132,6 @@ app.get("/", (req, res) => {
 // RUTAS DE LA API
 // =====================================================
 
-// Rutas de archivos (AWS S3)
-app.use('/api/files', fileRoutes);
 
 // Rutas de productos
 app.use("/api/products", productRoutes);
@@ -259,7 +255,6 @@ app.use((req, res) => {
         info: "/api/info",
         import: "/api/import",
         auth: "/api/auth",
-        files: "/api/files",
         email: "/api/email",
         quotations: "/api/quotations"
       }
