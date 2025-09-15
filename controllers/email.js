@@ -141,20 +141,20 @@ const sendTestEmail = async (req, res) => {
  */
 const getEmailStatus = async (req, res) => {
   try {
-    // Verificar si las variables de entorno están configuradas
+    // Verificar si las variables de entorno de SMTP2GO están configuradas
     const isConfigured = !!(
-      process.env.SMTP_HOST &&
-      process.env.SMTP_USER &&
-      process.env.SMTP_PASS
+      process.env.SMTP2GO_API_KEY &&
+      process.env.SMTP2GO_FROM_EMAIL
     );
 
     res.status(200).json({
       success: true,
       data: {
         configured: isConfigured,
-        smtpHost: process.env.SMTP_HOST || null,
-        smtpPort: process.env.SMTP_PORT || null,
-        smtpUser: process.env.SMTP_USER ? '***@' + process.env.SMTP_USER.split('@')[1] : null,
+        service: 'SMTP2GO',
+        apiKey: process.env.SMTP2GO_API_KEY ? '***' + process.env.SMTP2GO_API_KEY.slice(-4) : null,
+        fromEmail: process.env.SMTP2GO_FROM_EMAIL || null,
+        fromName: process.env.SMTP2GO_FROM_NAME || 'AIMEC',
         contactEmail: process.env.CONTACT_EMAIL || null
       }
     });
@@ -170,18 +170,19 @@ const getEmailStatus = async (req, res) => {
 };
 
 /**
- * Probar conexión SMTP
+ * Probar conexión SMTP2GO
  * POST /api/email/test-connection
  */
 const testSMTPConnection = async (req, res) => {
   try {
-    console.log('Probando conexión SMTP...');
+    console.log('Probando conexión SMTP2GO...');
     
     const result = await EmailService.testConnection();
     
     res.status(200).json({
       success: true,
-      message: result.message
+      message: result.message,
+      messageId: result.messageId
     });
 
   } catch (error) {

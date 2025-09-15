@@ -1,74 +1,98 @@
-const nodemailer = require('nodemailer');
+const axios = require('axios');
 
 class EmailService {
   constructor() {
-    this.transporter = null;
-    this.initializeTransporter();
+    this.apiKey = process.env.SMTP2GO_API_KEY;
+    this.apiUrl = 'https://api.smtp2go.com/v3/email/send';
+    this.fromEmail = process.env.SMTP2GO_FROM_EMAIL || process.env.SMTP_FROM;
+    this.fromName = process.env.SMTP2GO_FROM_NAME || 'AIMEC';
+    this.contactEmail = process.env.CONTACT_EMAIL || process.env.SMTP2GO_FROM_EMAIL;
+    
+    this.initializeService();
   }
 
-  initializeTransporter() {
-    // Configuración específica para Railway (producción)
-    const isProduction = process.env.NODE_ENV === 'production' || process.env.RAILWAY_ENVIRONMENT;
-    
-    const config = {
-      host: process.env.SMTP_HOST || 'smtp.zoho.com',
-      // En Railway, usar puerto 465 (SSL) que es más probable que esté permitido
-      port: parseInt(process.env.SMTP_PORT) || (isProduction ? 465 : 587),
-      secure: process.env.SMTP_SECURE === 'true' || parseInt(process.env.SMTP_PORT) === 465,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-      // Configuraciones optimizadas para Railway
-      tls: {
-        rejectUnauthorized: false,
-        ciphers: 'SSLv3',
-        // Configuraciones adicionales para Railway
-        servername: 'smtp.zoho.com'
-      },
-      // Timeouts más largos para Railway
-      connectionTimeout: isProduction ? 120000 : 60000, // 2 minutos en producción
-      greetingTimeout: isProduction ? 60000 : 30000,    // 1 minuto en producción
-      socketTimeout: isProduction ? 120000 : 60000,     // 2 minutos en producción
-      // Configuraciones de pool optimizadas para Railway
-      pool: false,
-      maxConnections: 1,
-      maxMessages: 1,
-      // Configuraciones adicionales para Railway
-      requireTLS: !isProduction, // En producción usar SSL directo
-      debug: !isProduction // Solo debug en desarrollo
-    };
-
-    console.log('Configuración SMTP:', {
-      environment: isProduction ? 'PRODUCTION (Railway)' : 'DEVELOPMENT',
-      host: config.host,
-      port: config.port,
-      secure: config.secure,
-      user: config.auth.user ? '***@' + config.auth.user.split('@')[1] : 'No configurado',
-      timeouts: {
-        connection: config.connectionTimeout,
-        greeting: config.greetingTimeout,
-        socket: config.socketTimeout
-      }
-    });
-
-    // Log adicional para Railway
-    if (isProduction) {
-      console.log('🚀 Configuración optimizada para Railway');
-      console.log('📧 Usando puerto 465 (SSL) para mejor compatibilidad');
+  initializeService() {
+    // Validar configuración requerida
+    if (!this.apiKey) {
+      console.error('❌ SMTP2GO_API_KEY no está configurado');
+      return;
     }
 
-    this.transporter = nodemailer.createTransport(config);
+    if (!this.fromEmail) {
+      console.error('❌ SMTP2GO_FROM_EMAIL no está configurado');
+      return;
+    }
 
-    // Verificar la configuración del transporter (opcional para cuentas gratuitas)
-    this.transporter.verify((error, success) => {
-      if (error) {
-        console.log('Advertencia en configuración de email (normal para cuentas gratuitas):', error.message);
-        console.log('El servicio seguirá funcionando para envío de correos');
-      } else {
-        console.log('Servidor de correo listo para enviar mensajes');
-      }
+    console.log('📧 Configuración SMTP2GO:', {
+      apiKey: this.apiKey ? '***' + this.apiKey.slice(-4) : 'No configurado',
+      fromEmail: this.fromEmail,
+      fromName: this.fromName,
+      contactEmail: this.contactEmail
     });
+
+    console.log('✅ Servicio de email SMTP2GO inicializado correctamente');
+  }
+
+  async sendEmail(emailData) {
+    try {
+      const payload = {
+        api_key: this.apiKey,
+        to: emailData.to,
+        sender: emailData.from || this.fromEmail,
+        subject: emailData.subject,
+        text_body: emailData.text,
+        html_body: emailData.html
+      };
+
+      // Agregar CC si existe
+      if (emailData.cc) {
+        payload.cc = emailData.cc;
+      }
+
+      // Agregar BCC si existe
+      if (emailData.bcc) {
+        payload.bcc = emailData.bcc;
+      }
+
+      console.log('Enviando email vía SMTP2GO:', {
+        to: emailData.to,
+        subject: emailData.subject,
+        from: payload.sender
+      });
+
+      const response = await axios.post(this.apiUrl, payload, {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        timeout: 30000 // 30 segundos de timeout
+      });
+
+      if (response.data && response.data.data) {
+        console.log('Email enviado exitosamente:', response.data.data);
+        return {
+          success: true,
+          messageId: response.data.data.email_id || 'unknown',
+          message: 'Email enviado exitosamente'
+        };
+      } else {
+        throw new Error('Respuesta inesperada de SMTP2GO');
+      }
+
+    } catch (error) {
+      console.error('Error enviando email vía SMTP2GO:', error);
+      
+      if (error.response) {
+        // Error de la API de SMTP2GO
+        const errorMessage = error.response.data?.error || error.response.data?.message || 'Error desconocido de SMTP2GO';
+        throw new Error(`Error SMTP2GO: ${errorMessage}`);
+      } else if (error.code === 'ECONNABORTED') {
+        throw new Error('Timeout: La API de SMTP2GO no respondió a tiempo');
+      } else if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
+        throw new Error('Error de conexión: No se puede conectar a la API de SMTP2GO');
+      } else {
+        throw new Error(`Error enviando email: ${error.message}`);
+      }
+    }
   }
 
   async sendContactEmail(contactData) {
@@ -81,23 +105,19 @@ class EmailService {
       }
 
       // Configurar el correo
-      const mailOptions = {
-        from: process.env.SMTP_FROM || process.env.SMTP_USER,
-        to: process.env.CONTACT_EMAIL || process.env.SMTP_USER,
+      const emailData = {
+        to: this.contactEmail,
+        from: this.fromEmail,
         subject: `Nuevo mensaje de contacto - ${name}`,
         html: this.generateContactEmailHTML(contactData),
         text: this.generateContactEmailText(contactData),
       };
 
       // Enviar el correo
-      const result = await this.transporter.sendMail(mailOptions);
+      const result = await this.sendEmail(emailData);
       console.log('Correo de contacto enviado:', result.messageId);
       
-      return {
-        success: true,
-        messageId: result.messageId,
-        message: 'Correo enviado exitosamente'
-      };
+      return result;
 
     } catch (error) {
       console.error('Error enviando correo de contacto:', error);
@@ -266,7 +286,7 @@ Este mensaje fue enviado desde el formulario de contacto de AIMEC.
 
             <div class="footer">
               <p>Esta cotización es válida por 30 días a partir de la fecha de emisión.</p>
-              <p>Para más información, contáctanos al email: ${process.env.CONTACT_EMAIL || process.env.SMTP_USER}</p>
+              <p>Para más información, contáctanos al email: ${this.contactEmail}</p>
               <p><strong>AIMEC</strong> - Componentes Industriales y Servicios Técnicos</p>
             </div>
           </div>
@@ -309,7 +329,7 @@ ${notes ? `NOTAS ADICIONALES:\n${notes}` : ''}
 
 ---
 Esta cotización es válida por 30 días a partir de la fecha de emisión.
-Para más información, contáctanos al email: ${process.env.CONTACT_EMAIL || process.env.SMTP_USER}
+Para más información, contáctanos al email: ${this.contactEmail}
 
 AIMEC - Componentes Industriales y Servicios Técnicos
     `;
@@ -325,69 +345,45 @@ AIMEC - Componentes Industriales y Servicios Técnicos
       }
 
       // Configurar el correo
-      const mailOptions = {
-        from: process.env.SMTP_FROM || process.env.SMTP_USER,
+      const emailData = {
         to: customerInfo.email,
-        cc: process.env.CONTACT_EMAIL || process.env.SMTP_USER, // Copia a la empresa
+        cc: this.contactEmail, // Copia a la empresa
+        from: this.fromEmail,
         subject: `Cotización AIMEC - ${customerInfo.name}`,
         html: this.generateQuotationEmailHTML(quotationData),
         text: this.generateQuotationEmailText(quotationData),
       };
 
       // Enviar el correo
-      const result = await this.transporter.sendMail(mailOptions);
+      const result = await this.sendEmail(emailData);
       console.log('Correo de cotización enviado:', result.messageId);
       
-      return {
-        success: true,
-        messageId: result.messageId,
-        message: 'Cotización enviada exitosamente'
-      };
+      return result;
 
     } catch (error) {
       console.error('Error enviando correo de cotización:', error);
-      
-      // Manejo específico de errores de timeout
-      if (error.code === 'ETIMEDOUT' || error.message.includes('timeout')) {
-        throw new Error(`Error de timeout: El servidor SMTP no responde. Verifica la configuración de red y credenciales.`);
-      }
-      
-      // Manejo específico de errores de autenticación
-      if (error.code === 'EAUTH' || error.message.includes('authentication')) {
-        throw new Error(`Error de autenticación: Verifica las credenciales SMTP (usuario y contraseña).`);
-      }
-      
-      // Manejo específico de errores de conexión
-      if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
-        throw new Error(`Error de conexión: No se puede conectar al servidor SMTP. Verifica el host y puerto.`);
-      }
-      
-      // Error genérico
       throw new Error(`Error enviando cotización: ${error.message}`);
     }
   }
 
   async testConnection() {
     try {
-      console.log('Probando conexión SMTP...');
-      await this.transporter.verify();
-      console.log('Conexión SMTP exitosa');
-      return { success: true, message: 'Conexión SMTP exitosa' };
+      console.log('Probando conexión SMTP2GO...');
+      
+      // Enviar un email de prueba
+      const testEmailData = {
+        to: this.fromEmail,
+        from: this.fromEmail,
+        subject: 'Test de configuración de correo - AIMEC',
+        text: 'Este es un correo de prueba para verificar la configuración del servicio de correo SMTP2GO.',
+        html: '<p>Este es un correo de prueba para verificar la configuración del servicio de correo SMTP2GO.</p>'
+      };
+
+      const result = await this.sendEmail(testEmailData);
+      console.log('Conexión SMTP2GO exitosa');
+      return { success: true, message: 'Conexión SMTP2GO exitosa', messageId: result.messageId };
     } catch (error) {
-      console.error('Error en conexión SMTP:', error);
-      
-      if (error.code === 'ETIMEDOUT') {
-        throw new Error('Timeout: El servidor SMTP no responde. Verifica la configuración.');
-      }
-      
-      if (error.code === 'EAUTH') {
-        throw new Error('Error de autenticación: Verifica las credenciales SMTP.');
-      }
-      
-      if (error.code === 'ECONNREFUSED') {
-        throw new Error('Conexión rechazada: Verifica el host y puerto SMTP.');
-      }
-      
+      console.error('Error en conexión SMTP2GO:', error);
       throw new Error(`Error de conexión: ${error.message}`);
     }
   }
@@ -397,15 +393,15 @@ AIMEC - Componentes Industriales y Servicios Técnicos
       // Primero probar la conexión
       await this.testConnection();
       
-      const mailOptions = {
-        from: process.env.SMTP_FROM || process.env.SMTP_USER,
-        to: process.env.SMTP_USER,
+      const emailData = {
+        to: this.fromEmail,
+        from: this.fromEmail,
         subject: 'Test de configuración de correo - AIMEC',
-        text: 'Este es un correo de prueba para verificar la configuración del servidor de correo.',
-        html: '<p>Este es un correo de prueba para verificar la configuración del servidor de correo.</p>'
+        text: 'Este es un correo de prueba para verificar la configuración del servicio de correo SMTP2GO.',
+        html: '<p>Este es un correo de prueba para verificar la configuración del servicio de correo SMTP2GO.</p>'
       };
 
-      const result = await this.transporter.sendMail(mailOptions);
+      const result = await this.sendEmail(emailData);
       console.log('Correo de prueba enviado:', result.messageId);
       
       return {
