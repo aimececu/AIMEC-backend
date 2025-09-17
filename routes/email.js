@@ -47,6 +47,38 @@ const emailRateLimit = rateLimit({
  *           type: string
  *           description: Mensaje del contacto
  *           example: "Me interesa conocer más sobre sus productos industriales"
+ *     ServiceForm:
+ *       type: object
+ *       required:
+ *         - name
+ *         - email
+ *         - message
+ *       properties:
+ *         name:
+ *           type: string
+ *           description: Nombre completo del contacto
+ *           example: "Juan Pérez"
+ *         email:
+ *           type: string
+ *           format: email
+ *           description: Email del contacto
+ *           example: "juan.perez@empresa.com"
+ *         phone:
+ *           type: string
+ *           description: Teléfono del contacto (opcional)
+ *           example: "+52 55 1234 5678"
+ *         company:
+ *           type: string
+ *           description: Empresa del contacto (opcional)
+ *           example: "Empresa ABC"
+ *         service:
+ *           type: string
+ *           description: Servicio de interés (opcional)
+ *           example: "Automatización Industrial"
+ *         message:
+ *           type: string
+ *           description: Mensaje del contacto
+ *           example: "Me interesa conocer más sobre sus servicios de automatización"
  *     EmailResponse:
  *       type: object
  *       properties:
@@ -125,6 +157,68 @@ const emailRateLimit = rateLimit({
  *                   example: "Error interno del servidor. Por favor, intenta nuevamente."
  */
 router.post('/contact', emailRateLimit, emailController.sendContactEmail);
+
+/**
+ * @swagger
+ * /api/email/services:
+ *   post:
+ *     summary: Enviar correo de consulta de servicios
+ *     description: Envía un correo electrónico con los datos del formulario de consulta de servicios
+ *     tags: [Email]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/ServiceForm'
+ *     responses:
+ *       200:
+ *         description: Correo enviado exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/EmailResponse'
+ *       400:
+ *         description: Datos de entrada inválidos
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: "Nombre, email y mensaje son requeridos"
+ *       429:
+ *         description: Demasiados intentos de envío
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: "Demasiados intentos de envío de correo. Intenta nuevamente en 15 minutos."
+ *       500:
+ *         description: Error interno del servidor
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: "Error interno del servidor. Por favor, intenta nuevamente."
+ */
+router.post('/services', emailRateLimit, emailController.sendServiceEmail);
 
 /**
  * @swagger

@@ -125,6 +125,36 @@ class EmailService {
     }
   }
 
+  async sendServiceEmail(serviceData) {
+    try {
+      const { name, email, phone, company, service, message } = serviceData;
+
+      // Validar datos requeridos
+      if (!name || !email || !message) {
+        throw new Error('Nombre, email y mensaje son requeridos');
+      }
+
+      // Configurar el correo
+      const emailData = {
+        to: this.contactEmail,
+        from: this.fromEmail,
+        subject: `Consulta de servicios - ${service || 'Servicio no especificado'} - ${name}`,
+        html: this.generateServiceEmailHTML(serviceData),
+        text: this.generateServiceEmailText(serviceData),
+      };
+
+      // Enviar el correo
+      const result = await this.sendEmail(emailData);
+      console.log('Correo de servicios enviado:', result.messageId);
+      
+      return result;
+
+    } catch (error) {
+      console.error('Error enviando correo de servicios:', error);
+      throw new Error(`Error enviando correo: ${error.message}`);
+    }
+  }
+
   generateContactEmailHTML(contactData) {
     const { name, email, phone, company, message } = contactData;
     
@@ -199,6 +229,96 @@ ${message}
 
 ---
 Este mensaje fue enviado desde el formulario de contacto de AIMEC.
+    `;
+  }
+
+  generateServiceEmailHTML(serviceData) {
+    const { name, email, phone, company, service, message } = serviceData;
+    
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Nueva consulta de servicios</title>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background-color: #2563eb; color: white; padding: 20px; text-align: center; }
+          .content { background-color: #f8fafc; padding: 20px; }
+          .field { margin-bottom: 15px; }
+          .label { font-weight: bold; color: #475569; }
+          .value { margin-top: 5px; }
+          .message-box { background-color: white; padding: 15px; border-left: 4px solid #2563eb; margin-top: 10px; }
+          .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #64748b; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>🔧 Nueva Consulta de Servicios</h1>
+            <p>AIMEC - Ingeniería Mecatrónica</p>
+          </div>
+          <div class="content">
+            <div class="field">
+              <div class="label">👤 Nombre:</div>
+              <div class="value">${name}</div>
+            </div>
+            <div class="field">
+              <div class="label">📧 Email:</div>
+              <div class="value">${email}</div>
+            </div>
+            ${phone ? `
+            <div class="field">
+              <div class="label">📞 Teléfono:</div>
+              <div class="value">${phone}</div>
+            </div>
+            ` : ''}
+            ${company ? `
+            <div class="field">
+              <div class="label">🏢 Empresa:</div>
+              <div class="value">${company}</div>
+            </div>
+            ` : ''}
+            ${service ? `
+            <div class="field">
+              <div class="label">⚙️ Servicio de interés:</div>
+              <div class="value">${service}</div>
+            </div>
+            ` : ''}
+            <div class="field">
+              <div class="label">💬 Consulta:</div>
+              <div class="message-box">${message}</div>
+            </div>
+          </div>
+          <div class="footer">
+            <p>Este mensaje fue enviado desde el formulario de servicios de AIMEC.</p>
+            <p>Fecha: ${new Date().toLocaleString('es-ES')}</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  }
+
+  generateServiceEmailText(serviceData) {
+    const { name, email, phone, company, service, message } = serviceData;
+    
+    return `
+Nueva consulta de servicios - AIMEC
+
+Nombre: ${name}
+Email: ${email}
+${phone ? `Teléfono: ${phone}` : ''}
+${company ? `Empresa: ${company}` : ''}
+${service ? `Servicio de interés: ${service}` : ''}
+
+Consulta:
+${message}
+
+---
+Este mensaje fue enviado desde el formulario de servicios de AIMEC.
+Fecha: ${new Date().toLocaleString('es-ES')}
     `;
   }
 

@@ -102,6 +102,115 @@ const sendContactEmail = async (req, res) => {
 };
 
 /**
+ * Enviar correo de consulta de servicios
+ * POST /api/email/services
+ */
+const sendServiceEmail = async (req, res) => {
+  try {
+    const { name, email, phone, company, service, message } = req.body;
+
+    // Validar datos requeridos
+    if (!name || !email || !message) {
+      return res.status(400).json({
+        success: false,
+        error: 'Nombre, email y mensaje son requeridos'
+      });
+    }
+
+    // Validar formato de email
+    try {
+      validateEmail(email);
+    } catch (error) {
+      return res.status(400).json({
+        success: false,
+        error: error.message
+      });
+    }
+
+    // Validar longitud del mensaje
+    if (message.length < 10) {
+      return res.status(400).json({
+        success: false,
+        error: 'El mensaje debe tener al menos 10 caracteres'
+      });
+    }
+
+    if (message.length > 2000) {
+      return res.status(400).json({
+        success: false,
+        error: 'El mensaje no puede exceder 2000 caracteres'
+      });
+    }
+
+    // Validar nombre
+    try {
+      validateText(name, 'Nombre', 2, 100);
+    } catch (error) {
+      return res.status(400).json({
+        success: false,
+        error: error.message
+      });
+    }
+
+    // Validar teléfono si se proporciona
+    if (phone && phone.length > 20) {
+      return res.status(400).json({
+        success: false,
+        error: 'El teléfono no puede exceder 20 caracteres'
+      });
+    }
+
+    // Validar empresa si se proporciona
+    if (company && company.length > 100) {
+      return res.status(400).json({
+        success: false,
+        error: 'El nombre de la empresa no puede exceder 100 caracteres'
+      });
+    }
+
+    // Validar servicio si se proporciona
+    if (service && service.length > 200) {
+      return res.status(400).json({
+        success: false,
+        error: 'El nombre del servicio no puede exceder 200 caracteres'
+      });
+    }
+
+    // Preparar datos del servicio
+    const serviceData = {
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
+      phone: phone ? phone.trim() : null,
+      company: company ? company.trim() : null,
+      service: service ? service.trim() : null,
+      message: message.trim()
+    };
+
+    // Enviar correo
+    const result = await EmailService.sendServiceEmail(serviceData);
+
+    // Log del envío
+    console.log(`Correo de servicios enviado desde ${email} (${name}) - Servicio: ${service || 'No especificado'}`);
+
+    res.status(200).json({
+      success: true,
+      message: 'Consulta de servicios enviada exitosamente. Te contactaremos pronto.',
+      data: {
+        messageId: result.messageId
+      }
+    });
+
+  } catch (error) {
+    console.error('Error en sendServiceEmail:', error);
+    
+    res.status(500).json({
+      success: false,
+      error: 'Error interno del servidor. Por favor, intenta nuevamente.'
+    });
+  }
+};
+
+/**
  * Enviar correo de prueba
  * POST /api/email/test
  */
@@ -197,6 +306,7 @@ const testSMTPConnection = async (req, res) => {
 
 module.exports = {
   sendContactEmail,
+  sendServiceEmail,
   sendTestEmail,
   getEmailStatus,
   testSMTPConnection
