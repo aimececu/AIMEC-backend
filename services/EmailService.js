@@ -37,7 +37,7 @@ class EmailService {
     try {
       const payload = {
         api_key: this.apiKey,
-        to: emailData.to,
+        to: [emailData.to],
         sender: emailData.from || this.fromEmail,
         subject: emailData.subject,
         text_body: emailData.text,
@@ -46,12 +46,12 @@ class EmailService {
 
       // Agregar CC si existe
       if (emailData.cc) {
-        payload.cc = emailData.cc;
+        payload.cc = Array.isArray(emailData.cc) ? emailData.cc : [emailData.cc];
       }
 
       // Agregar BCC si existe
       if (emailData.bcc) {
-        payload.bcc = emailData.bcc;
+        payload.bcc = Array.isArray(emailData.bcc) ? emailData.bcc : [emailData.bcc];
       }
 
       console.log('Enviando email vía SMTP2GO:', {
@@ -79,12 +79,28 @@ class EmailService {
       }
 
     } catch (error) {
-      console.error('Error enviando email vía SMTP2GO:', error);
+      console.error('Error enviando email vía SMTP2GO:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message
+      });
       
       if (error.response) {
         // Error de la API de SMTP2GO
-        const errorMessage = error.response.data?.error || error.response.data?.message || 'Error desconocido de SMTP2GO';
-        throw new Error(`Error SMTP2GO: ${errorMessage}`);
+        const status = error.response.status;
+        const data = error.response.data;
+        
+        if (status === 403) {
+          throw new Error('Error SMTP2GO: API key inválida o sin permisos. Verifica tu configuración.');
+        } else if (status === 400) {
+          throw new Error(`Error SMTP2GO: Datos inválidos - ${data?.error || data?.message || 'Revisa el formato del email'}`);
+        } else if (status === 429) {
+          throw new Error('Error SMTP2GO: Límite de envíos excedido. Intenta más tarde.');
+        } else {
+          const errorMessage = data?.error || data?.message || `Error HTTP ${status}`;
+          throw new Error(`Error SMTP2GO: ${errorMessage}`);
+        }
       } else if (error.code === 'ECONNABORTED') {
         throw new Error('Timeout: La API de SMTP2GO no respondió a tiempo');
       } else if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
