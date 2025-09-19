@@ -1,4 +1,5 @@
 const axios = require('axios');
+const { sanitizeForLogging } = require('../config/security');
 
 class EmailService {
   constructor() {
@@ -24,13 +25,18 @@ class EmailService {
     }
 
     console.log('📧 Configuración SMTP2GO:', {
-      apiKey: this.apiKey ? '***' + this.apiKey.slice(-4) : 'No configurado',
+      apiKey: this.apiKey ? '***HIDDEN***' : 'No configurado',
       fromEmail: this.fromEmail,
       fromName: this.fromName,
       contactEmail: this.contactEmail
     });
 
     console.log('✅ Servicio de email SMTP2GO inicializado correctamente');
+  }
+
+  // Usar la función de sanitización centralizada
+  sanitizeForLogging(data) {
+    return sanitizeForLogging(data);
   }
 
   async sendEmail(emailData) {
@@ -54,11 +60,11 @@ class EmailService {
         payload.bcc = Array.isArray(emailData.bcc) ? emailData.bcc : [emailData.bcc];
       }
 
-      console.log('Enviando email vía SMTP2GO:', {
+      console.log('Enviando email vía SMTP2GO:', this.sanitizeForLogging({
         to: emailData.to,
         subject: emailData.subject,
         from: payload.sender
-      });
+      }));
 
       const response = await axios.post(this.apiUrl, payload, {
         headers: {
@@ -79,12 +85,13 @@ class EmailService {
       }
 
     } catch (error) {
-      console.error('Error enviando email vía SMTP2GO:', {
+      // NO exponer datos sensibles en logs
+      console.error('Error enviando email vía SMTP2GO:', this.sanitizeForLogging({
         status: error.response?.status,
         statusText: error.response?.statusText,
-        data: error.response?.data,
-        message: error.message
-      });
+        message: error.message,
+        hasData: !!error.response?.data
+      }));
       
       if (error.response) {
         // Error de la API de SMTP2GO
