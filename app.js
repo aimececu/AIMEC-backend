@@ -25,6 +25,13 @@ const quotationRoutes = require('./routes/quotations');
 const app = express();
 
 // =====================================================
+// CONFIGURACIÓN DE PROXY TRUST
+// =====================================================
+
+// Configurar trust proxy para manejar headers de proxy (Railway, Vercel, etc.)
+app.set('trust proxy', true);
+
+// =====================================================
 // CONFIGURACIÓN DE MIDDLEWARES
 // =====================================================
 
